@@ -179,10 +179,14 @@ if __name__ == '__main__':
     p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
     p.model_dir=p.save_base_dir+str(p.test_set)+'/'+p.train_model+'/' # ./savedata/1/GATraj/'
     print("----------------------------model-----------------------------------",p.model_dir)
-    # p.load_model = p.save_base_dir+str(p.test_set)+'/'+p.train_model+'/' + p.train_model + "_2.tar"
-    p.config=p.model_dir+'/config_'+p.phase+'.yaml' # ./savedata/1/GATraj/config_train.ymal'
-    p.num_epochs = 200
+    p.load_model = 1000
+    p.num_epochs = 2000
     p.learning_rate = 1e-2
+    p.config=p.model_dir+'/config_'+p.phase+'.yaml' # ./savedata/1/GATraj/config_train.ymal'
+
+
+
+
     """
     车辆数据 --end
     """
@@ -198,6 +202,7 @@ if __name__ == '__main__':
     processor = Processor(args)
     print("args.num_epochs:",args.num_epochs)
     print("args.learning_rate:",args.learning_rate)
+    print("args.load_model:",args.load_model)
     if args.phase=='test':
         processor.playtest()
     else:
