@@ -212,15 +212,18 @@ class Processor():
                       str(predicted_trajectory_lnglat.size(1)), " ,", str(predicted_trajectory_lnglat.size
                                                                           (2)))
                 predicted_trajectory_lnglat = predicted_trajectory_lnglat.cpu().detach().numpy().reshape(-1, predicted_trajectory_lnglat.size(2)*predicted_trajectory_lnglat.size(1))
-                true_trajectory_lnglat = (torch.add(batch_norm_gt[1:, :, :2], shift_value_gt[1:, :, :2]))
+                np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
+                # true_trajectory_lnglat = (torch.add(batch_norm_gt[1:, :, :2], shift_value_gt[1:, :, :2]))
+                true_trajectory_lnglat = batch_abs_gt[1:, :, :2]
                 print("true trajectory size:", str(true_trajectory_lnglat.size(0)), " ,",
                       str(true_trajectory_lnglat.size(1)), " ,", str(true_trajectory_lnglat.size
                                                                      (2)))
+
                 true_trajectory_lnglat = true_trajectory_lnglat.cpu().detach().numpy().reshape(-1, true_trajectory_lnglat.size(2)*true_trajectory_lnglat.size(1))
                 # self.predicted_trajectory_file.write(
                 #     'predicted trajectory: ' + str(predicted_trajectory_lnglat) + "\ntrue trajectory:" + str(
                 #         true_trajectory_lnglat) + '\n')
-                np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
+
                 np.savetxt(self.true_trajectory_file, true_trajectory_lnglat, fmt="%.6f", delimiter=",")
 
                 error_epoch_list.append(error)

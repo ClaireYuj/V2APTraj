@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+import math
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
 
 class SoftTargetCrossEntropyLoss(nn.Module):
@@ -160,6 +161,7 @@ class GATraj(nn.Module):
         soft_target = F.softmax(-l2_norm / self.args.pred_length, dim=0).t().detach() # [N, F]
         cls_loss += self.cls_loss(out_pi, soft_target)
         loss = reg_loss + cls_loss # 将回归损失和分类损失之和作为总体的loss
+        loss = math.sqrt(math.pow(loss,2))
 
         #best ADE
         sample_k = out_mu[best_mode, torch.arange(batch_size)].permute(1, 0, 2)  #[H, N, 2]
