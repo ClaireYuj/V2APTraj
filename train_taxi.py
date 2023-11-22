@@ -56,9 +56,12 @@ def get_parser():
     parser.add_argument(
         '--using_cuda',default=True,type=ast.literal_eval) # We did not test on cpu
     # You may change these arguments (model selection and dirs)
+    # parser.add_argument(
+    #     '--test_set',default=1,type=int,
+    #     help='Set this value to 0~4 for ETH-univ, ETH-hotel, UCY-zara01, UCY-zara02, UCY-univ')
     parser.add_argument(
-        '--test_set',default=1,type=int,
-        help='Set this value to 0~4 for ETH-univ, ETH-hotel, UCY-zara01, UCY-zara02, UCY-univ')
+        '--test_set',default=0,type=int,
+        help='defalut 0, set in the util.self.data_dirs')
     parser.add_argument(
         '--base_dir',default='.',
         help='Base directory including these scrits.')
@@ -176,12 +179,24 @@ if __name__ == '__main__':
     """
     p.save_base_dir = "./savedata/"
     p.dataset = "taxi"
+<<<<<<< HEAD
+    p.num_epochs = 100
+    p.learning_rate = 1e-2
+    p.load_model = 0
+    p.save_dir = p.save_base_dir + "/"+ str(p.dataset) + "_" + str(p.num_epochs) + "/"
+    # p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
+    p.model_dir=p.save_dir+p.train_model+'/' # ./savedata/1/GATraj/'
+    print("----------------------------model-----------------------------------",p.model_dir)
+
+
+=======
     p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
     p.model_dir=p.save_base_dir+str(p.test_set)+'/'+p.train_model+'/' # ./savedata/1/GATraj/'
     print("----------------------------model-----------------------------------",p.model_dir)
     # p.load_model = 1000
     p.num_epochs = 100000
     p.learning_rate = 1e-2
+>>>>>>> 136e58438422e4a2edb484350881f0a403f7062c
     p.config=p.model_dir+'/config_'+p.phase+'.yaml' # ./savedata/1/GATraj/config_train.ymal'
 
 
