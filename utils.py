@@ -44,7 +44,7 @@ class DataLoader_bytrajec2():
             self.testskip = [skip[x] for x in self.test_set]
 
         if self.args.dataset == 'taxi':
-            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22233']
+            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22523']
             self.data_dir = './'
             # Data directory where the pre-processed pickle file resides
 
@@ -507,6 +507,7 @@ def L2forTest(outputs,targets,obs_length):
     '''
     seq_length = outputs.shape[0]
     error = torch.norm(outputs-targets,p=2,dim=2)
+
     error_pred_length = error[obs_length-1:]
     error = torch.sum(error_pred_length)
     error_cnt = error_pred_length.numel()
@@ -516,6 +517,7 @@ def L2forTest(outputs,targets,obs_length):
     final_error_cnt = error_pred_length[-1].numel()
     first_erro = torch.sum(error_pred_length[0])
     first_erro_cnt = error_pred_length[0].numel()
+    error = torch.mean(error ** 2)
     return error.item(),error_cnt,final_error.item(),final_error_cnt,first_erro.item(),first_erro_cnt
 
     
