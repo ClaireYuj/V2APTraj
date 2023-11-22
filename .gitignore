@@ -1,1 +1,5 @@
 /savedata/
+/.idea/
+/_pycache/
+/data_processing.py/
+/train_taxi.py/
