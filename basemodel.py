@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from laplace_decoder import *
-from fractions import gcd
+from math import gcd
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def initialize_weights(modules):

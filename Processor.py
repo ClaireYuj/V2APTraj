@@ -84,7 +84,7 @@ class Processor():
         print("epoch_num:", self.args.num_epochs + 1)
         for epoch in range(self.epoch, self.args.num_epochs + 1):
             print('Epoch-{0} lr: {1}'.format(epoch, self.optimizer.param_groups[0]['lr']))
-            train_loss = self.train_epoch(epoch)
+            train_loss = self.train_epoch(epoch) # 获得训练损失
             val_error, val_final_error, val_erro_first = self.val_epoch(epoch)
             self.scheduler.step()
             # if epoch == self.args.num_epochs:

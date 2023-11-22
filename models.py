@@ -141,7 +141,7 @@ class GATraj(nn.Module):
         else:
             self.hidden_state_global = self.hidden_state_unsplited
             cn_global = cn
-        mdn_out = self.Laplacian_Decoder.forward(self.x_encoded_dense, self.hidden_state_global, cn_global, epoch)
+        mdn_out = self.Laplacian_Decoder.forward(self.x_encoded_dense, self.hidden_state_global, cn_global, epoch) # predicted trajectory
         GATraj_loss, full_pre_tra = self.mdn_loss(train_y.permute(2, 0, 1), mdn_out, 1, iftest)  #[K, H, N, 2]
         return GATraj_loss, full_pre_tra
 
@@ -152,14 +152,15 @@ class GATraj(nn.Module):
         out_mu, out_sigma, out_pi = y_prime 
         y_hat = torch.cat((out_mu, out_sigma), dim=-1)
         reg_loss, cls_loss = 0, 0
-        full_pre_tra = []
-        l2_norm = (torch.norm(out_mu - y, p=2, dim=-1) ).sum(dim=-1)   # [F, N]
-        best_mode = l2_norm.argmin(dim=0)
+        full_pre_tra = [] # full_pre_tra是预测的轨迹
+        l2_norm = (torch.norm(out_mu - y, p=2, dim=-1) ).sum(dim=-1)   # [F, N] # l2_norm也就是欧氏距离
+        best_mode = l2_norm.argmin(dim=0) # 选择均值最小的作为最好的模型
         y_hat_best = y_hat[best_mode, torch.arange(batch_size)]
         reg_loss += self.reg_loss(y_hat_best, y)
         soft_target = F.softmax(-l2_norm / self.args.pred_length, dim=0).t().detach() # [N, F]
         cls_loss += self.cls_loss(out_pi, soft_target)
-        loss = reg_loss + cls_loss
+        loss = reg_loss + cls_loss # 将回归损失和分类损失之和作为总体的loss
+
         #best ADE
         sample_k = out_mu[best_mode, torch.arange(batch_size)].permute(1, 0, 2)  #[H, N, 2]
         full_pre_tra.append(torch.cat((self.pre_obs,sample_k), axis=0))
