@@ -36,6 +36,7 @@ class Processor():
         self.log_file_curve = open(os.path.join(self.args.model_dir, 'log_curve.txt'), 'a+')
         self.predicted_trajectory_file = open(os.path.join(self.args.model_dir, 'predicted_trajectory.csv'), 'w')
         self.true_trajectory_file = open(os.path.join(self.args.model_dir, 'true_trajectory.csv'), 'w')
+        self.loss_fig_path = os.path.join(self.args.model_dir, "train_loss_fig.png")
 
     def save_model(self, epoch):
         model_path = self.args.save_dir + '/' + self.args.train_model + '/' + self.args.train_model + '_' + \
@@ -81,6 +82,7 @@ class Processor():
     def playtrain(self):
         print('Training begin')
         test_error, test_final_error, first_erro_test, val_final_error, val_error, val_erro_first = 0, 0, 0, 0, 0, 0
+        loss_list = []
         print("epoch_num:", self.args.num_epochs + 1)
         for epoch in range(self.epoch, self.args.num_epochs + 1):
             print('Epoch-{0} lr: {1}'.format(epoch, self.optimizer.param_groups[0]['lr']))
@@ -97,6 +99,8 @@ class Processor():
                                       + str(test_error) + ',' + str(test_final_error) + ',' + str(
                 first_erro_test) + '\n')
 
+            # plot loss
+            loss_list.append(train_loss)
             self.log_file_curve.close()
             self.log_file_curve = open(os.path.join(self.args.model_dir, 'log_curve.txt'), 'a+')
             # console log
@@ -106,6 +110,13 @@ class Processor():
                           first_erro_test))
             model_path = self.args.save_dir + '/' + self.args.train_model + '/' + self.args.train_model + '_' + str(
                 epoch) + '.tar'
+        print('------------------drawing loss fig-------------------------')
+        plt.plot(loss_list)
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training Loss over Epochs')
+        plt.savefig(self.loss_fig_path)
+        plt.show()
 
     def train_epoch(self, epoch):
         """   batch_abs: the (orientated) batch
@@ -212,15 +223,18 @@ class Processor():
                       str(predicted_trajectory_lnglat.size(1)), " ,", str(predicted_trajectory_lnglat.size
                                                                           (2)))
                 predicted_trajectory_lnglat = predicted_trajectory_lnglat.cpu().detach().numpy().reshape(-1, predicted_trajectory_lnglat.size(2)*predicted_trajectory_lnglat.size(1))
-                true_trajectory_lnglat = (torch.add(batch_norm_gt[1:, :, :2], shift_value_gt[1:, :, :2]))
+                np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
+                # true_trajectory_lnglat = (torch.add(batch_norm_gt[1:, :, :2], shift_value_gt[1:, :, :2]))
+                true_trajectory_lnglat = batch_abs_gt[1:, :, :2]
                 print("true trajectory size:", str(true_trajectory_lnglat.size(0)), " ,",
                       str(true_trajectory_lnglat.size(1)), " ,", str(true_trajectory_lnglat.size
                                                                      (2)))
+
                 true_trajectory_lnglat = true_trajectory_lnglat.cpu().detach().numpy().reshape(-1, true_trajectory_lnglat.size(2)*true_trajectory_lnglat.size(1))
                 # self.predicted_trajectory_file.write(
                 #     'predicted trajectory: ' + str(predicted_trajectory_lnglat) + "\ntrue trajectory:" + str(
                 #         true_trajectory_lnglat) + '\n')
-                np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
+
                 np.savetxt(self.true_trajectory_file, true_trajectory_lnglat, fmt="%.6f", delimiter=",")
 
                 error_epoch_list.append(error)
@@ -234,3 +248,14 @@ class Processor():
             first_erro_cnt_epoch += first_erro_cnt
             error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
         return error_epoch / error_cnt_epoch, final_error_epoch / final_error_cnt_epoch, first_erro_epoch / first_erro_cnt_epoch
+
+
+    def loss_plotter_by_file(self, loss_file_path):
+        loss_list = []
+
+        with open(loss_file_path, "r") as loss_file:
+            line = loss_file.readlines()
+            while line:
+                loss_value = (line.spilt(",")[1]).split(",")[0]
+                loss_list.append(float(loss_value))
+
