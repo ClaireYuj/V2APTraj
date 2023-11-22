@@ -11,14 +11,40 @@ class DataLoader_bytrajec2():
         self.args=args
         self.is_gt=is_gt
         self.num_tra = 0
-        if self.args.dataset=='eth5' or self.args.dataset == 'taxi':
+        if self.args.dataset=='eth5':
 
-            # self.data_dirs = ['./data/eth/univ', './data/eth/hotel',
-            #                   './data/ucy/zara/zara01', './data/ucy/zara/zara02',
-            #                   './data/ucy/univ/students001','data/ucy/univ/students003',
-            #                   './data/ucy/univ/uni_examples','./data/ucy/zara/zara03']
-            # self.data_dir = './data'
-            self.data_dirs = ['./sample/22231_22235', './sample/test']
+            self.data_dirs = ['./data/eth/univ', './data/eth/hotel',
+                              './data/ucy/zara/zara01', './data/ucy/zara/zara02',
+                              './data/ucy/univ/students001','data/ucy/univ/students003',
+                              './data/ucy/univ/uni_examples','./data/ucy/zara/zara03']
+            self.data_dir = './data'
+            # self.data_dirs = ['./sample/test', './sample/22231_22235']
+            # self.data_dir = './'
+            # Data directory where the pre-processed pickle file resides
+
+            # skip=[6,10,10,10,10,10,10,10]
+            skip = [6, 10, 10, 10, 10, 10, 10, 10]
+            if args.ifvalid:
+                self.val_fraction = args.val_fraction
+            else:
+                self.val_fraction = 0
+
+            train_set = [i for i in range(len(self.data_dirs))]
+            if args.test_set==4 or args.test_set==5:
+                self.test_set=[4,5]
+            else:
+                self.test_set=[self.args.test_set]
+
+            for x in self.test_set:
+                train_set.remove(x)
+            self.train_dir = [self.data_dirs[x] for x in train_set]
+            self.test_dir = [self.data_dirs[x] for x in self.test_set]
+
+            self.trainskip = [skip[x] for x in train_set]
+            self.testskip = [skip[x] for x in self.test_set]
+
+        if self.args.dataset == 'taxi':
+            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22233']
             self.data_dir = './'
             # Data directory where the pre-processed pickle file resides
 
@@ -27,20 +53,22 @@ class DataLoader_bytrajec2():
             if args.ifvalid:
                 self.val_fraction = args.val_fraction
             else:
-                self.val_fraction=0
+                self.val_fraction = 0
 
-            train_set=[i for i in range(len(self.data_dirs))]
-            if args.test_set==4 or args.test_set==5:
-                self.test_set=[4,5]
-            else:
-                self.test_set=[self.args.test_set]
-
+            train_set = [i for i in range(len(self.data_dirs))]
+            # if args.test_set==4 or args.test_set==5:
+            #     self.test_set=[4,5]
+            # else:
+            #     self.test_set=[self.args.test_set]
+            self.test_set = [self.args.test_set]
             for x in self.test_set:
                 train_set.remove(x)
-            self.train_dir=[self.data_dirs[x] for x in train_set]
+            self.train_dir = [self.data_dirs[x] for x in train_set]
             self.test_dir = [self.data_dirs[x] for x in self.test_set]
-            self.trainskip=[skip[x] for x in train_set]
-            self.testskip=[skip[x] for x in self.test_set]
+            print("train dir:", self.train_dir)
+            print("test dir:", self.test_dir)
+            self.trainskip = [skip[x] for x in train_set]
+            self.testskip = [skip[x] for x in self.test_set]
 
         self.train_data_file = os.path.join(self.args.save_dir,"train_trajectories.cpkl")
         self.test_data_file = os.path.join(self.args.save_dir, "test_trajectories.cpkl")
