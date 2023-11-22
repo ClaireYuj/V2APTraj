@@ -179,8 +179,8 @@ if __name__ == '__main__':
     p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
     p.model_dir=p.save_base_dir+str(p.test_set)+'/'+p.train_model+'/' # ./savedata/1/GATraj/'
     print("----------------------------model-----------------------------------",p.model_dir)
-    p.load_model = 1000
-    p.num_epochs = 2000
+    # p.load_model = 1000
+    p.num_epochs = 100000
     p.learning_rate = 1e-2
     p.config=p.model_dir+'/config_'+p.phase+'.yaml' # ./savedata/1/GATraj/config_train.ymal'
 

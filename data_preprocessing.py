@@ -125,7 +125,6 @@ def time_sort_in_format(input_file=sample_output_file, output_file=sample_sorted
     df.iloc[1, :] = df.iloc[1, :].astype(int)
     # df.ix[1] = df.ix[1].astype(int)
 
-
     with open(output_file, "w") as f:
         df.to_csv(f, index=False)
 
@@ -181,18 +180,18 @@ def convert_latlon_to_xy(longitude, latitude):
 
     return x, y
 
-def get_from_code2code(start_taxi_code=22240, end_taxi_code=22255, time_format=10): # 22223-34003 --  train set, 34004-36950:test set
+def get_from_code2code(start_taxi_code=22223, end_taxi_code=22523, time_format=10, sample_root_dir = "sample"): # 22223-34003 --  train set, 34004-36950:test set
     """
     从原始的taxiData中获得从start_taxiCode到end_taxi_code的文件，并拼成一个文件
     time_format: 把第一行时间按照每300 s进行划分
     """
     df = pd.DataFrame()
-
+    sample_root_dir = "sample_lnglat/"
     print("start read: ",input_file)
     count = 0
-    if not str(start_taxi_code)+ "_"+ str(end_taxi_code) in os.listdir("sample/"):
-        os.mkdir("sample/"+ str(start_taxi_code)+ "_"+ str(end_taxi_code))
-    output_orderByCar_sample_file_path = "sample/"+ str(start_taxi_code)+ "_"+ str(end_taxi_code)+"/true_pos_.csv"
+    if not str(start_taxi_code)+ "_"+ str(end_taxi_code) in os.listdir(sample_root_dir):
+        os.mkdir(sample_root_dir+ str(start_taxi_code)+ "_"+ str(end_taxi_code))
+    output_orderByCar_sample_file_path =sample_root_dir+ str(start_taxi_code)+ "_"+ str(end_taxi_code)+"/true_pos_.csv"
     # output_orderByCar_sample_file = open(output_orderByCar_sample_file_path, "w")
     for file in os.listdir(input_orderByCar_dir):
         if(file.endswith(".txt") and file.startswith("taxiCode_")):
@@ -207,13 +206,15 @@ def get_from_code2code(start_taxi_code=22240, end_taxi_code=22255, time_format=1
                         time = int(int(time) // time_format * time_format)
                         lng = line.split(",")[2]  # 经度
                         lat = line.split(",")[3]  # 纬度
-                        x, y = convert_latlon_to_xy(lng, lat)
-                        data = [time, id, x, y]
+
+                        data = [time, id, lng, lat]
+                        # x, y = convert_latlon_to_xy(lng, lat)
+                        # data = [time, id, x, y]
                         data = pd.DataFrame(pd.Series(data))
                         count += 1
                         df = pd.concat([df, data], axis=1)
                         if count % 1000 == 0:
-                            print("write ", count , "times")
+                            print("write ", count , "times in taxi_code:", code)
                         # df[count] = data
     # output_orderByCar_sample_file.close()
     df = df.T
@@ -223,6 +224,7 @@ def get_from_code2code(start_taxi_code=22240, end_taxi_code=22255, time_format=1
 
     with open(output_orderByCar_sample_file_path, "w") as write_f:
         df.to_csv(write_f,header=False, index=False)
+
 
     print("finish write to ", output_orderByCar_sample_file_path)
 
