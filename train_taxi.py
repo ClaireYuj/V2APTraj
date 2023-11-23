@@ -188,10 +188,10 @@ if __name__ == '__main__':
     p.save_base_dir = "./savedata/"
     p.dataset = "taxi"
 
-    p.num_epochs = 100
-    p.phase = 'test'
+    p.num_epochs = 10
+    p.phase = 'train'
     p.learning_rate = 1e-2
-    p.load_model = 100
+    p.load_model = 0
     p.save_dir = p.save_base_dir + "/" + str(p.dataset) + "_" + str(p.num_epochs) + "/"
     # p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
     p.model_dir = p.save_dir + p.train_model + '/'  # ./savedata/1/GATraj/'

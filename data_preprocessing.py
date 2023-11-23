@@ -200,7 +200,7 @@ def get_from_code2code(start_taxi_code=22333, end_taxi_code=22343, time_format=1
             if code >= start_taxi_code and code <= end_taxi_code:
                 with open(input_orderByCar_dir+file, "r") as read_f:
                     for line in read_f.readlines():
-                        id = line.split(",")[0]
+                        id = int(line.split(",")[0])
                         time_str = line.split(",")[1]
                         time = int(time_str.split(":")[0]) * 3600 + int(time_str.split(":")[1]) * 60 + int(
                             time_str.split(":")[2])
