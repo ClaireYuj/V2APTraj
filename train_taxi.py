@@ -189,15 +189,28 @@ if __name__ == '__main__':
     p.dataset = "taxi"
 
     p.num_epochs = 10
+    p.num_epochs = 1
+
     p.phase = 'train'
     p.learning_rate = 1e-2
     p.load_model = 0
     p.save_dir = p.save_base_dir + "/" + str(p.dataset) + "_" + str(p.num_epochs) + "/"
     # p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
-    p.model_dir = p.save_dir + p.train_model + '/'  # ./savedata/1/GATraj/'
-    print("----------------------------model-----------------------------------", p.model_dir)
 
-    p.config = p.model_dir + '/config_' + p.phase + '.yaml'  # ./savedata/1/GATraj/config_train.ymal'
+    p.model_dir=p.save_dir+p.train_model+'/' # ./savedata/1/GATraj/'
+    print("----------------------------model-----------------------------------",p.model_dir)
+
+
+
+    # p.save_dir=p.save_base_dir+str(p.test_set)+'/' # ./savedata/1'
+    # p.model_dir=p.save_base_dir+str(p.test_set)+'/'+p.train_model+'/' # ./savedata/1/GATraj/'
+    # print("----------------------------model-----------------------------------",p.model_dir)
+    # # p.load_model = 1000
+    # p.num_epochs = 100
+    # p.learning_rate = 1e-2
+
+    p.config=p.model_dir+'/config_'+p.phase+'.yaml' # ./savedata/1/GATraj/config_train.ymal'
+
 
     """
     车辆数据 --end

@@ -104,7 +104,7 @@ class GATraj(nn.Module):
 
     def forward(self, inputs, epoch, iftest=False):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        batch_abs_gt, batch_norm_gt, nei_list_batch, nei_num_batch, batch_split = inputs # #[H, N, 2], [H, N, 2], [B, H, N, N], [N, H], [B, 2]
+        id_lists,batch_abs_gt, batch_norm_gt, nei_list_batch, nei_num_batch, batch_split = inputs # #[H, N, 2], [H, N, 2], [B, H, N, N], [N, H], [B, 2]
         self.batch_norm_gt = batch_norm_gt
         if self.args.input_offset:
             train_x = batch_norm_gt[1:self.args.obs_length, :, :] - batch_norm_gt[:self.args.obs_length-1, :, :] #[H, N, 2]
@@ -119,7 +119,8 @@ class GATraj(nn.Module):
         train_x = train_x.permute(1, 2, 0) #[N, 2, H]
         train_y = batch_norm_gt[self.args.obs_length:, :, :].permute(1, 2, 0) #[N, 2, H]
         self.pre_obs=batch_norm_gt[1:self.args.obs_length]
-        self.x_encoded_dense, self.hidden_state_unsplited, cn=self.Temperal_Encoder.forward(train_x)  #[N, D], [N, D]
+        # self.x_encoded_dense, self.hidden_state_unsplited, cn=self.Temperal_Encoder.forward(train_x)  #[N, D], [N, D]
+        self.x_encoded_dense, self.hidden_state_unsplited, cn = self.Temperal_Encoder.forward(train_x)  # [N, D], [N, D]
         self.hidden_state_global = torch.ones_like(self.hidden_state_unsplited, device=device)
         cn_global = torch.ones_like(cn, device=device)
         if self.args.SR:

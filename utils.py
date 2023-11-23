@@ -44,7 +44,7 @@ class DataLoader_bytrajec2():
             self.testskip = [skip[x] for x in self.test_set]
 
         if self.args.dataset == 'taxi':
-            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22233']
+            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22333_22343']
             self.data_dir = './'
             # Data directory where the pre-processed pickle file resides
 
@@ -201,9 +201,11 @@ class DataLoader_bytrajec2():
 
         val_index=data_index[:,:int(data_index.shape[1]*val_fraction)]
         train_index = data_index[:,(int(data_index.shape[1] * val_fraction)+1):]
-        # print("frameped_dict:{0}\n,pedtraject_dict:{1},\ntrain_index:{2},\nsetname:{3}\n".format(frameped_dict,pedtraject_dict,train_index,setname))
-        trainbatch=self.get_seq_from_index_balance(frameped_dict,pedtraject_dict,train_index,setname)
-        valbatch = self.get_seq_from_index_balance(frameped_dict,pedtraject_dict,val_index,setname)
+
+        # trainbatch=self.get_seq_from_index_balance(frameped_dict,pedtraject_dict,train_index,setname)
+        # valbatch = self.get_seq_from_index_balance(frameped_dict,pedtraject_dict,val_index,setname)
+        trainbatch = self.get_seq_from_index_balance_with_ID(frameped_dict, pedtraject_dict, train_index, setname)
+        valbatch = self.get_seq_from_index_balance_with_ID(frameped_dict, pedtraject_dict, val_index, setname)
 
         trainbatchnums=len(trainbatch)
         valbatchnums=len(valbatch)
@@ -215,6 +217,7 @@ class DataLoader_bytrajec2():
     def get_data_index(self,data_dict,setname,ifshuffle=True):
         '''
         Get the dataset sampling index.
+        set用于标识场景
         '''
         # print("data dict:",data_dict)
         set_id = []
@@ -239,7 +242,101 @@ class DataLoader_bytrajec2():
         if setname=='train':
             data_index=np.append(data_index,data_index[:,:self.args.batch_size],1)
 
-        return data_index
+        return data_index #返回一个[[帧], [场景id], [帧id]]的list,场景也就是训练集
+
+    def get_seq_from_index_balance_with_ID(self, frameped_dict, pedtraject_dict, data_index, setname):
+        '''
+        Query the trajectories fragments from data sampling index.
+        Notes: Divide the scene if there are too many people; accumulate the scene if there are few people.
+               This function takes less gpu memory.
+        '''
+        batch_data_mass = []
+        batch_data = []
+        Batch_id = []
+        ped_list = []  # 用于存储对应的行人标识信息
+
+        if setname == 'train':
+            skip = self.trainskip
+        else:
+            skip = self.testskip
+
+        ped_cnt = 0
+        batch_count = 0
+        batch_data_64 = []
+        batch_split = []
+        start, end = 0, 0
+        nei_lists = []
+        for i in range(data_index.shape[1]):
+            if i % 100 == 0:
+                print(i, '/number of frames of data in total', data_index.shape[1])
+            cur_frame, cur_set, _ = data_index[:, i]
+            framestart_pedi = set(frameped_dict[cur_set][cur_frame])
+            try:
+                frameend_pedi = set(
+                    frameped_dict[cur_set][cur_frame + (self.args.pred_length - 1 + self.args.min_obs) * skip[cur_set]])
+                # 设置frame结束点
+                # frameend_pedi = set(frameped_dict[cur_set][cur_frame+300])
+            except:
+                if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
+                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                continue
+            present_pedi = framestart_pedi | frameend_pedi  # 取两个集合的并集，表示在当前帧开始和结束时刻存在的行人
+            if (framestart_pedi & frameend_pedi).__len__() == 0:
+                if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
+                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                continue
+            traject = ()  # 20个一组，32组
+            for ped in present_pedi:
+                cur_trajec, ifexistobs = self.find_trajectory_fragment(pedtraject_dict[cur_set][ped], cur_frame,
+                                                                       self.args.seq_length, skip[cur_set])
+                if len(cur_trajec) == 0:
+                    continue
+                if ifexistobs == False:
+                    # Just ignore trajectories if their data don't exist at the last observed time step (easy for data shift)
+                    continue
+                cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)  # 不包含行人标识信息
+                traject = traject.__add__(cur_trajec)  # tuple of cur_trajec arrays in the same scene
+                ped_list.append(ped)  # 将行人标识信息存储到 ped_list 中
+            if traject.__len__() < 1:
+                if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
+                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                continue
+            self.num_tra += traject.__len__()
+            end += traject.__len__()  # batch是按照 traject 的长度划分的
+            batch_split.append([start, end])
+            start = end
+            traject_batch = np.concatenate(traject, 1)  # ped dimension
+            cur_pednum = traject_batch.shape[1]  # 当前的 batch split size
+            batch_id = (cur_set, cur_frame,)
+            cur_batch_data, cur_Batch_id = [], []
+            cur_batch_data.append(traject_batch)  # 向 cur_batch_data 中加入轨迹数据
+            cur_Batch_id.append(batch_id)
+            cur_batch_data, nei_list = self.massup_batch(cur_batch_data)
+            nei_lists.append(nei_list)
+            ped_cnt += cur_pednum
+            batch_count += 1
+            if self.args.batch_size == 1:
+                batch_data_mass.append((ped_list, cur_batch_data, batch_split, nei_lists, ))
+                batch_split = []
+                start, end = 0, 0
+                nei_lists = []
+                ped_list = []  # 清空 ped_list
+            else:
+                if batch_count == self.args.batch_size or i == data_index.shape[1] - 1:
+                    batch_data_64 = self.merg_batch(cur_batch_data, batch_data_64)
+                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists, ))
+                    batch_count = 0
+                    batch_split = []
+                    start, end = 0, 0
+                    nei_lists = []
+                    ped_list = []  # 清空 ped_list
+                else:
+                    if batch_count == 1:
+                        batch_data_64 = cur_batch_data
+                    else:
+                        batch_data_64 = self.merg_batch(cur_batch_data, batch_data_64)
+        return batch_data_mass
+
 
     def get_seq_from_index_balance(self,frameped_dict,pedtraject_dict,data_index,setname):
         '''
@@ -468,19 +565,19 @@ class DataLoader_bytrajec2():
 
 
     def get_train_batch(self,idx,epoch):
-        batch_data,batch_split,nei_lists = self.trainbatch[idx]
+        id_lists, batch_data,batch_split,nei_lists = self.trainbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=self.args.randomRotate)
 
-        return batch_data,batch_split,nei_lists 
+        return id_lists, batch_data,batch_split,nei_lists
     def get_val_batch(self,idx,epoch):
-        batch_data,batch_split,nei_lists  = self.valbatch[idx]
+        id_lists,batch_data,batch_split,nei_lists  = self.valbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=False)
-        return batch_data,batch_split,nei_lists 
+        return id_lists, batch_data,batch_split,nei_lists
 
     def get_test_batch(self,idx,epoch):
-        batch_data, batch_split, nei_lists  = self.testbatch[idx]
+        id_lists, batch_data, batch_split, nei_lists  = self.testbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=False)
-        return batch_data, batch_split, nei_lists 
+        return id_lists, batch_data, batch_split, nei_lists
 
 
 
@@ -507,6 +604,7 @@ def L2forTest(outputs,targets,obs_length):
     '''
     seq_length = outputs.shape[0]
     error = torch.norm(outputs-targets,p=2,dim=2)
+
     error_pred_length = error[obs_length-1:]
     error = torch.sum(error_pred_length)
     error_cnt = error_pred_length.numel()
@@ -516,6 +614,7 @@ def L2forTest(outputs,targets,obs_length):
     final_error_cnt = error_pred_length[-1].numel()
     first_erro = torch.sum(error_pred_length[0])
     first_erro_cnt = error_pred_length[0].numel()
+    error = torch.mean(error ** 2)
     return error.item(),error_cnt,final_error.item(),final_error_cnt,first_erro.item(),first_erro_cnt
 
     
