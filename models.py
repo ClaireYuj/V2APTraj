@@ -104,7 +104,7 @@ class GATraj(nn.Module):
 
     def forward(self, inputs, epoch, iftest=False):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        id_lists,batch_abs_gt, batch_norm_gt, nei_list_batch, nei_num_batch, batch_split = inputs # #[H, N, 2], [H, N, 2], [B, H, N, N], [N, H], [B, 2]
+        id_lists,batch_abs_gt, batch_norm_gt, time_seq_list,nei_list_batch, nei_num_batch, batch_split = inputs # #[H, N, 2], [H, N, 2], [B, H, N, N], [N, H], [B, 2]
         self.batch_norm_gt = batch_norm_gt
         if self.args.input_offset:
             train_x = batch_norm_gt[1:self.args.obs_length, :, :] - batch_norm_gt[:self.args.obs_length-1, :, :] #[H, N, 2]

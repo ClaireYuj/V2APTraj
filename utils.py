@@ -44,6 +44,7 @@ class DataLoader_bytrajec2():
             self.testskip = [skip[x] for x in self.test_set]
 
         if self.args.dataset == 'taxi':
+            # self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22523','./sample_lnglat/22333_22343']
             self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22333_22343']
             self.data_dir = './'
             # Data directory where the pre-processed pickle file resides
@@ -254,6 +255,7 @@ class DataLoader_bytrajec2():
         batch_data = []
         Batch_id = []
         ped_list = []  # 用于存储对应的行人标识信息
+        time_seq_list = () # 用于存储时间
 
         if setname == 'train':
             skip = self.trainskip
@@ -278,12 +280,12 @@ class DataLoader_bytrajec2():
                 # frameend_pedi = set(frameped_dict[cur_set][cur_frame+300])
             except:
                 if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
-                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                    batch_data_mass.append((ped_list, batch_data_64, time_seq_list, batch_split, nei_lists,))
                 continue
             present_pedi = framestart_pedi | frameend_pedi  # 取两个集合的并集，表示在当前帧开始和结束时刻存在的行人
             if (framestart_pedi & frameend_pedi).__len__() == 0:
                 if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
-                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                    batch_data_mass.append((ped_list, batch_data_64, time_seq_list,batch_split, nei_lists,))
                 continue
             traject = ()  # 20个一组，32组
             for ped in present_pedi:
@@ -294,12 +296,16 @@ class DataLoader_bytrajec2():
                 if ifexistobs == False:
                     # Just ignore trajectories if their data don't exist at the last observed time step (easy for data shift)
                     continue
-                cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)  # 不包含行人标识信息
+                # cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)  # 不包含行人标识信息和时间信息
+                cur_time = (cur_trajec[:, 0].reshape(-1,1,1),)
+                cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)
+
                 traject = traject.__add__(cur_trajec)  # tuple of cur_trajec arrays in the same scene
                 ped_list.append(ped)  # 将行人标识信息存储到 ped_list 中
+                time_seq_list = time_seq_list.__add__(cur_time)
             if traject.__len__() < 1:
                 if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
-                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists,))
+                    batch_data_mass.append((ped_list, batch_data_64, time_seq_list,batch_split, nei_lists,))
                 continue
             self.num_tra += traject.__len__()
             end += traject.__len__()  # batch是按照 traject 的长度划分的
@@ -316,7 +322,7 @@ class DataLoader_bytrajec2():
             ped_cnt += cur_pednum
             batch_count += 1
             if self.args.batch_size == 1:
-                batch_data_mass.append((ped_list, cur_batch_data, batch_split, nei_lists, ))
+                batch_data_mass.append((ped_list, cur_batch_data, time_seq_list,batch_split, nei_lists, ))
                 batch_split = []
                 start, end = 0, 0
                 nei_lists = []
@@ -324,7 +330,7 @@ class DataLoader_bytrajec2():
             else:
                 if batch_count == self.args.batch_size or i == data_index.shape[1] - 1:
                     batch_data_64 = self.merg_batch(cur_batch_data, batch_data_64)
-                    batch_data_mass.append((ped_list, batch_data_64, batch_split, nei_lists, ))
+                    batch_data_mass.append((ped_list, batch_data_64, time_seq_list,batch_split, nei_lists, ))
                     batch_count = 0
                     batch_split = []
                     start, end = 0, 0
@@ -335,7 +341,7 @@ class DataLoader_bytrajec2():
                         batch_data_64 = cur_batch_data
                     else:
                         batch_data_64 = self.merg_batch(cur_batch_data, batch_data_64)
-        return batch_data_mass
+        return batch_data_mass # [[id], [lng,lat], [time], [batch_split],[nei_list]]
 
 
     def get_seq_from_index_balance(self,frameped_dict,pedtraject_dict,data_index,setname):
@@ -565,19 +571,19 @@ class DataLoader_bytrajec2():
 
 
     def get_train_batch(self,idx,epoch):
-        id_lists, batch_data,batch_split,nei_lists = self.trainbatch[idx]
+        id_lists, batch_data, time_seq_list,batch_split,nei_lists = self.trainbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=self.args.randomRotate)
 
-        return id_lists, batch_data,batch_split,nei_lists
+        return id_lists, batch_data, time_seq_list, batch_split,nei_lists
     def get_val_batch(self,idx,epoch):
-        id_lists,batch_data,batch_split,nei_lists  = self.valbatch[idx]
+        id_lists,batch_data,time_seq_list,batch_split,nei_lists  = self.valbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=False)
-        return id_lists, batch_data,batch_split,nei_lists
+        return id_lists, batch_data, time_seq_list,batch_split,nei_lists
 
     def get_test_batch(self,idx,epoch):
-        id_lists, batch_data, batch_split, nei_lists  = self.testbatch[idx]
+        id_lists, batch_data, time_seq_list, batch_split, nei_lists  = self.testbatch[idx]
         batch_data = self.rotate_shift_batch(batch_data,epoch,idx,ifrotate=False)
-        return id_lists, batch_data, batch_split, nei_lists
+        return id_lists, batch_data, time_seq_list,batch_split, nei_lists
 
 
 
