@@ -200,11 +200,11 @@ class Processor():
 
     def test_epoch(self, epoch):
         self.net.eval()
+        id_in_traj_list_flag = False
+
         error_epoch, final_error_epoch, first_erro_epoch = 0, 0, 0
         error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
         error_cnt_epoch, final_error_cnt_epoch, first_erro_cnt_epoch = 1e-5, 1e-5, 1e-5
-        pre_id_traj_df = pd.DataFrame()
-        true_id_traj_df = pd.DataFrame()
         predicted_trajectory_lnglat = []
         true_trajectory_lnglat = []
 
@@ -213,11 +213,13 @@ class Processor():
                 print('testing batch', batch, self.dataloader_gt.testbatchnums)
             id_lists,inputs_gt, batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
             id_lists_double = [] # to write the id in list as index of trajectory, because the tuple like[lng,lat], thus it takes two
-            for id in id_lists:
-                id_lists_double.append(id)
-                id_lists_double.append(id)
-            predicted_trajectory_lnglat.append(id_lists_double)
-            true_trajectory_lnglat.append(id_lists_double)
+            if not id_in_traj_list_flag:
+                for id in id_lists:
+                    id_lists_double.append(id)
+                    id_lists_double.append(id)
+                predicted_trajectory_lnglat.append(id_lists_double)
+                true_trajectory_lnglat.append(id_lists_double)
+                id_in_traj_list_flag = True
 
             inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt])
             if self.args.using_cuda:
