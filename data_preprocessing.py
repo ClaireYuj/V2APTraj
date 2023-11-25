@@ -181,7 +181,7 @@ def convert_latlon_to_xy(longitude, latitude):
 
     return x, y
 
-def get_from_code2code(start_taxi_code=22523, end_taxi_code=22623, time_format=10, root_path="sample"): # 22223-34003 --  train set, 34004-36950:test set
+def get_from_code2code(start_taxi_code=22624, end_taxi_code=23024, time_format=10, root_path="sample"): # 22223-34003 --  train set, 34004-36950:test set
     """
     从原始的taxiData中获得从start_taxiCode到end_taxi_code的文件，并拼成一个文件
     time_format: 把第一行时间按照每300 s进行划分

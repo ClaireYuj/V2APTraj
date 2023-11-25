@@ -188,8 +188,7 @@ if __name__ == '__main__':
     p.save_base_dir = "./savedata/"
     p.dataset = "taxi"
 
-    p.num_epochs = 10
-    p.num_epochs = 1
+    p.num_epochs = 100
 
     p.phase = 'train'
     p.learning_rate = 1e-2

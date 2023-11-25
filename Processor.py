@@ -39,7 +39,7 @@ class Processor():
         self.true_trajectory_file = open(os.path.join(self.args.model_dir, 'true_trajectory.csv'), 'w')
         self.predicted_trajectory_file_path = os.path.join(self.args.model_dir, 'predicted_trajectory.csv')
         self.true_trajectory_file_path = os.path.join(self.args.model_dir, 'true_trajectory.csv'), 'w'
-        self.loss_fig_path = os.path.join(self.args.model_dir, "train_loss_fig.png")
+        self.loss_fig_path = os.path.join(self.args.model_dir, "train_loss_fig_"+str(self.args.num_epochs)+".png")
 
     def save_model(self, epoch):
         model_path = self.args.save_dir + '/' + self.args.train_model + '/' + self.args.train_model + '_' + \
@@ -133,15 +133,21 @@ class Processor():
         loss_epoch = 0
         for batch in range(self.dataloader_gt.trainbatchnums):
             start = time.time()
-            id_lists, inputs_gt, batch_split, nei_lists = self.dataloader_gt.get_train_batch(batch,
+            id_lists, inputs_gt, time_seq_list,batch_split, nei_lists = self.dataloader_gt.get_train_batch(batch,
                                                                                    epoch)  # batch_split:[batch_size, 2]
 
-            inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt])
+            inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt]) # 转为tensor
+            id_lists = torch.Tensor(id_lists)
+            time_seq_list = (torch.Tensor(time_seq_list)).permute(1,0,2,3)
+            time_seq_list = torch.squeeze(time_seq_list, dim=3)
+
             if self.args.using_cuda:
                 inputs_gt = tuple([i.cuda() for i in inputs_gt])
+                id_lists = id_lists.cuda()
+                time_seq_list = time_seq_list.cuda()
 
             batch_abs_gt, batch_norm_gt, shift_value_gt, seq_list_gt, nei_num = inputs_gt
-            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
+            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, time_seq_list, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
 
             self.net.zero_grad()
             GATraj_loss, full_pre_tra = self.net.forward(inputs_fw, epoch, iftest=False)
@@ -172,13 +178,18 @@ class Processor():
         for batch in range(self.dataloader_gt.valbatchnums):
             if batch % 100 == 0:
                 print('testing batch', batch, self.dataloader_gt.valbatchnums)
-            id_lists, inputs_gt, batch_split, nei_lists = self.dataloader_gt.get_val_batch(batch,
+            id_lists, inputs_gt, time_seq_list,batch_split, nei_lists = self.dataloader_gt.get_val_batch(batch,
                                                                                  epoch)  # batch_split:[batch_size, 2]
             inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt])
+            id_lists = torch.Tensor(id_lists)
+            time_seq_list = (torch.Tensor(time_seq_list)).permute(1,0,2,3)
+            time_seq_list = torch.squeeze(time_seq_list, dim=3)
             if self.args.using_cuda:
                 inputs_gt = tuple([i.cuda() for i in inputs_gt])
+                id_lists = id_lists.cuda()
+                time_seq_list = time_seq_list.cuda()
             batch_abs_gt, batch_norm_gt, shift_value_gt, seq_list_gt, nei_num = inputs_gt
-            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
+            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, time_seq_list, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
             GATraj_loss, full_pre_tra = self.net.forward(inputs_fw, epoch, iftest=True)
             if GATraj_loss == 0:
                 continue
@@ -198,6 +209,85 @@ class Processor():
             error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
         return error_epoch / error_cnt_epoch, final_error_epoch / final_error_cnt_epoch, first_erro_epoch / first_erro_cnt_epoch
 
+    # def test_epoch(self, epoch):
+    #     self.net.eval()
+    #     id_in_traj_list_flag = False
+    #
+    #     error_epoch, final_error_epoch, first_erro_epoch = 0, 0, 0
+    #     error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
+    #     error_cnt_epoch, final_error_cnt_epoch, first_erro_cnt_epoch = 1e-5, 1e-5, 1e-5
+    #     predicted_trajectory_lnglat = []
+    #     true_trajectory_lnglat = []
+    #
+    #     for batch in range(self.dataloader_gt.testbatchnums):
+    #         if batch % 100 == 0:
+    #             print('testing batch', batch, self.dataloader_gt.testbatchnums)
+    #         id_lists,inputs_gt, batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
+    #         id_lists_double = [] # to write the id in list as index of trajectory, because the tuple like[lng,lat], thus it takes two
+    #         if not id_in_traj_list_flag:
+    #             for id in id_lists:
+    #                 id_lists_double.append(id)
+    #                 id_lists_double.append(id)
+    #             predicted_trajectory_lnglat.append(id_lists_double)
+    #             true_trajectory_lnglat.append(id_lists_double)
+    #             id_in_traj_list_flag = True
+    #
+    #         inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt])
+    #         if self.args.using_cuda:
+    #             inputs_gt = tuple([i.cuda() for i in inputs_gt])
+    #
+    #         batch_abs_gt, batch_norm_gt, shift_value_gt, seq_list_gt, nei_num = inputs_gt  # batch_abs_gt是轨迹
+    #         inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
+    #         GATraj_loss, full_pre_tra = self.net.forward(inputs_fw, epoch, iftest=True)
+    #         if GATraj_loss == 0:
+    #             continue
+    #         print("id lists:", id_lists, " len of id lists:", len(id_lists))
+    #         print("len of full pre tra:", len(full_pre_tra))
+    #         id_lists = np.array(id_lists)
+    #
+    #         for pre_tra in full_pre_tra:
+    #             # pre_tra = full_pre_tra[i]
+    #             error, error_cnt, final_error, final_error_cnt, first_erro, first_erro_cnt = \
+    #                 L2forTest(pre_tra, batch_norm_gt[1:, :, :2], self.args.obs_length)
+    #
+    #             cur_predicted_trajectory_lnglat = torch.add(pre_tra, shift_value_gt[1:, :, :2])
+    #             # print("predicted trajectory size:", str(predicted_trajectory_lnglat.size(0)), " ,",
+    #             #       str(predicted_trajectory_lnglat.size(1)), " ,", str(predicted_trajectory_lnglat.size
+    #             #                                                           (2)))
+    #             cur_predicted_trajectory_lnglat = cur_predicted_trajectory_lnglat.cpu().detach().numpy().reshape(-1, cur_predicted_trajectory_lnglat.size(2)*cur_predicted_trajectory_lnglat.size(1))
+    #             # predicted_trajectory_lnglat = np.column_stack((id_lists, predicted_trajectory_lnglat))
+    #             print("type of predicted_trajectory_lnglat:",type(predicted_trajectory_lnglat))
+    #             predicted_trajectory_lnglat = np.vstack([predicted_trajectory_lnglat, cur_predicted_trajectory_lnglat])
+    #             cur_true_trajectory_lnglat = batch_abs_gt[1:, :, :2]
+    #             # print("true trajectory size:", str(cur_true_trajectory_lnglat.size(0)), " ,",
+    #             #       str(cur_true_trajectory_lnglat.size(1)), " ,", str(true_trajectory_lnglat.size
+    #             #                                                      (2)))
+    #
+    #             cur_true_trajectory_lnglat = cur_true_trajectory_lnglat.cpu().detach().numpy().reshape(-1, cur_true_trajectory_lnglat.size(2)*cur_true_trajectory_lnglat.size(1))
+    #             # self.predicted_trajectory_file.write(
+    #             #     'predicted trajectory: ' + str(predicted_trajectory_lnglat) + "\ntrue trajectory:" + str(
+    #             #         true_trajectory_lnglat) + '\n')
+    #
+    #             true_trajectory_lnglat = np.vstack([true_trajectory_lnglat, cur_true_trajectory_lnglat])
+    #
+    #             error_epoch_list.append(error)
+    #             final_error_epoch_list.append(final_error)
+    #             first_erro_epoch_list.append(first_erro)
+    #         # predicted_trajectory_lnglat = np.vstack([id_lists_double, predicted_trajectory_lnglat])
+    #         # true_trajectory_lnglat = np.vstack([id_lists_double, true_trajectory_lnglat])
+    #         np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
+    #         np.savetxt(self.true_trajectory_file, true_trajectory_lnglat, fmt="%.6f", delimiter=",")
+    #         first_erro_epoch += min(first_erro_epoch_list)
+    #         final_error_epoch += min(final_error_epoch_list)
+    #         error_epoch += min(error_epoch_list)
+    #         error_cnt_epoch += error_cnt
+    #         final_error_cnt_epoch += final_error_cnt
+    #         first_erro_cnt_epoch += first_erro_cnt
+    #         error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
+    #
+    #     return error_epoch / error_cnt_epoch, final_error_epoch / final_error_cnt_epoch, first_erro_epoch / first_erro_cnt_epoch
+
+
     def test_epoch(self, epoch):
         self.net.eval()
         id_in_traj_list_flag = False
@@ -205,37 +295,47 @@ class Processor():
         error_epoch, final_error_epoch, first_erro_epoch = 0, 0, 0
         error_epoch_list, final_error_epoch_list, first_erro_epoch_list = [], [], []
         error_cnt_epoch, final_error_cnt_epoch, first_erro_cnt_epoch = 1e-5, 1e-5, 1e-5
+        pred_traj_df = pd.DataFrame()
+        true_traj_df = pd.DataFrame()
+
         predicted_trajectory_lnglat = []
         true_trajectory_lnglat = []
 
         for batch in range(self.dataloader_gt.testbatchnums):
             if batch % 100 == 0:
                 print('testing batch', batch, self.dataloader_gt.testbatchnums)
-            id_lists,inputs_gt, batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
+            id_lists,inputs_gt, time_seq_list,batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
+
             id_lists_double = [] # to write the id in list as index of trajectory, because the tuple like[lng,lat], thus it takes two
+            id_lists = torch.Tensor(id_lists)
+
             if not id_in_traj_list_flag:
-                for id in id_lists:
-                    id_lists_double.append(id)
-                    id_lists_double.append(id)
+                for index in range(len(id_lists)):
+                    for count in range(self.args.input_size + 1):
+                        id_lists_double.append(id_lists[index])
+                    # id_lists_double.append(time_seq_list[index])
                 predicted_trajectory_lnglat.append(id_lists_double)
                 true_trajectory_lnglat.append(id_lists_double)
                 id_in_traj_list_flag = True
 
             inputs_gt = tuple([torch.Tensor(i) for i in inputs_gt])
+            time_seq_list = (torch.Tensor(time_seq_list)).permute(1,0,2,3)
+            time_seq_list = torch.squeeze(time_seq_list, dim=3)
             if self.args.using_cuda:
                 inputs_gt = tuple([i.cuda() for i in inputs_gt])
+                id_lists = id_lists.cuda()
+                time_seq_list = time_seq_list.cuda()
 
             batch_abs_gt, batch_norm_gt, shift_value_gt, seq_list_gt, nei_num = inputs_gt  # batch_abs_gt是轨迹
-            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
+            inputs_fw = id_lists, batch_abs_gt, batch_norm_gt, time_seq_list,nei_lists, nei_num, batch_split  # [H, N, 2], [H, N, 2], [B, H, N, N], [N, H]
             GATraj_loss, full_pre_tra = self.net.forward(inputs_fw, epoch, iftest=True)
             if GATraj_loss == 0:
                 continue
             print("id lists:", id_lists, " len of id lists:", len(id_lists))
             print("len of full pre tra:", len(full_pre_tra))
-            id_lists = np.array(id_lists)
+            # id_lists = np.array(id_lists)
 
             for pre_tra in full_pre_tra:
-                # pre_tra = full_pre_tra[i]
                 error, error_cnt, final_error, final_error_cnt, first_erro, first_erro_cnt = \
                     L2forTest(pre_tra, batch_norm_gt[1:, :, :2], self.args.obs_length)
 
@@ -243,29 +343,34 @@ class Processor():
                 # print("predicted trajectory size:", str(predicted_trajectory_lnglat.size(0)), " ,",
                 #       str(predicted_trajectory_lnglat.size(1)), " ,", str(predicted_trajectory_lnglat.size
                 #                                                           (2)))
+
+                cur_predicted_trajectory_lnglat = torch.cat((time_seq_list[1:,:cur_predicted_trajectory_lnglat.size(1), :], cur_predicted_trajectory_lnglat),dim=2)
                 cur_predicted_trajectory_lnglat = cur_predicted_trajectory_lnglat.cpu().detach().numpy().reshape(-1, cur_predicted_trajectory_lnglat.size(2)*cur_predicted_trajectory_lnglat.size(1))
                 # predicted_trajectory_lnglat = np.column_stack((id_lists, predicted_trajectory_lnglat))
                 print("type of predicted_trajectory_lnglat:",type(predicted_trajectory_lnglat))
-                predicted_trajectory_lnglat = np.vstack([predicted_trajectory_lnglat, cur_predicted_trajectory_lnglat])
-                cur_true_trajectory_lnglat = batch_abs_gt[1:, :, :2]
-                # print("true trajectory size:", str(cur_true_trajectory_lnglat.size(0)), " ,",
-                #       str(cur_true_trajectory_lnglat.size(1)), " ,", str(true_trajectory_lnglat.size
-                #                                                      (2)))
+                try:
+                    predicted_trajectory_lnglat = np.vstack([predicted_trajectory_lnglat, cur_predicted_trajectory_lnglat])
+                except Exception as e:
+                    print(e)
+                    print("cur_pre:",cur_predicted_trajectory_lnglat.shape)
+                    print("all_pre:",predicted_trajectory_lnglat.shape)
+                # cur_true_trajectory_lnglat = batch_abs_gt[1:, :, :2]
+                cur_true_trajectory_lnglat = torch.cat((time_seq_list[1:,:batch_abs_gt.size(1), :],batch_abs_gt[1:, :, :2]),dim=2)
 
                 cur_true_trajectory_lnglat = cur_true_trajectory_lnglat.cpu().detach().numpy().reshape(-1, cur_true_trajectory_lnglat.size(2)*cur_true_trajectory_lnglat.size(1))
-                # self.predicted_trajectory_file.write(
-                #     'predicted trajectory: ' + str(predicted_trajectory_lnglat) + "\ntrue trajectory:" + str(
-                #         true_trajectory_lnglat) + '\n')
 
-                true_trajectory_lnglat = np.vstack([true_trajectory_lnglat, cur_true_trajectory_lnglat])
-
+                try:
+                    true_trajectory_lnglat = np.vstack([true_trajectory_lnglat, cur_true_trajectory_lnglat])
+                except Exception as e:
+                    print(e)
+                    print("cur_true:",cur_true_trajectory_lnglat.shape)
+                    print("all_true:",true_trajectory_lnglat.shape)
                 error_epoch_list.append(error)
                 final_error_epoch_list.append(final_error)
                 first_erro_epoch_list.append(first_erro)
-            # predicted_trajectory_lnglat = np.vstack([id_lists_double, predicted_trajectory_lnglat])
-            # true_trajectory_lnglat = np.vstack([id_lists_double, true_trajectory_lnglat])
-            np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%.6f", delimiter=",")
-            np.savetxt(self.true_trajectory_file, true_trajectory_lnglat, fmt="%.6f", delimiter=",")
+
+            np.savetxt(self.predicted_trajectory_file, predicted_trajectory_lnglat,fmt="%f", delimiter=",")
+            np.savetxt(self.true_trajectory_file, true_trajectory_lnglat, fmt="%f", delimiter=",")
             first_erro_epoch += min(first_erro_epoch_list)
             final_error_epoch += min(final_error_epoch_list)
             error_epoch += min(error_epoch_list)
