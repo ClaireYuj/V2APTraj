@@ -51,7 +51,7 @@ def calDis(lat1, lng1, lat2, lng2):
 
 
 
-def outputDisToFile(taxiData, code_time_data, isOrderByTime):
+def outputDisToFile(taxiData, code_time_data, isOrderByTime, true_or_pred="true"):
     """
     把两点间的距离输出到./processingData目录下的distance.txt文件
     :param taxiData: 车辆经纬度列表
@@ -283,7 +283,7 @@ def areaParition(datalist, true_or_pred="true"):
 
 
 
-def drawCarDensity(region_map, schools_map, regionHtmlPath):
+def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true"):
     """
     在地图上标出区域的范围， 并显示该区域内的车辆数
     :param region_map:  areaParition的返回值，形如[{"area index": 1, "min_lat":10, "min_lng":10, "max_lat":20, "max_lng":20, "carNum":30},{...},{...}]
@@ -300,10 +300,12 @@ def drawCarDensity(region_map, schools_map, regionHtmlPath):
             max_lng = region["max_lng"]
 
             bound = [[min_lat, min_lng], [max_lat, max_lng]]
+            rect_color = "lightblue" if true_or_pred == "true" else "red"
             folium.Rectangle(
                 bound,
                 # popup="</br>car num:"+str(region["carNum"])+"</br>",
-                tooltip="</br>car num:"+str(region["carNum"])+"</br>",
+                tooltip="</br>"+true_or_pred+" car num:"+str(region["carNum"])+"</br>",
+                fill_color = rect_color,
                 fill=True
             ).add_to(schools_map)
             # print(" draw one : min_lat:", min_lat, "min_lng:", min_lng, "max_lat:", max_lat, "max_lng:", max_lng)
@@ -330,9 +332,10 @@ def drawCartrajectory(taxiData, code_time_list, map ,new_map_path,true_or_pred="
         data_0 = code_time_list[i-1]
         data_1 = code_time_list[i]
         taxi_info = "code: "+str(data_0[0])+" time: "+str(data_0[1])+"-"+str(data_1[1])
-        car_trjectory_file.write("code: "+str(data_0[0])+" time: "+str(data_0[1])+"-"+str(data_1[1])+" location:"+str(locations)+"\n")
+        car_trjectory_file.write(true_or_pred + " code: "+str(data_0[0])+" time: "+str(data_0[1])+"-"+str(data_1[1])+" location:"+str(locations)+"\n")
         # 包含车辆信息
-        polyline = folium.PolyLine(locations=locations, color="red", weight=2.5, opacity=0.5,
+        line_color = "blue" if true_or_pred == "true" else "red"
+        polyline = folium.PolyLine(locations=locations, color=line_color, weight=2.5, opacity=0.5,
                         arrow_style='fancy', popup="<br>"+taxi_info+"</br>").add_to(map)
 
         # 显示行车方向
@@ -381,7 +384,7 @@ def findAreaIndexofCar(lat_list, lng_list, car_lat, car_lng):
 
 
 # 显示在之前的地图插件上，看看具体位置
-def drawscatt(data, mapHtmlpath):
+def drawscatt(data, mapHtmlpath, true_or_pred="true"):
     print("Start draw........")
     schools_map = folium.Map(location=data[0], zoom_start=10,
                              tiles="http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}",
@@ -409,22 +412,43 @@ def drawscatt(data, mapHtmlpath):
     # webbrowser.open(mapHtmlpath)
 
 
-def drawscattByPartition(taxiData, mapHtmlpath):
+def createMapCanvas(taxiData, create_or_not=0):
+    """
+    :param: taxiData: to set the central of the map
+    :param: create_or_not: if create_or_not=0, not be created before,
+            if create_or_not=1, have been created before, ignore this operation
+    """
+
+    schools_map = folium.Map(location=taxiData[0], zoom_start=10,
+                             tiles="http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}",
+                             attr="&copy; <a href='http://ditu.amap.com/'>高德地图</a>",
+
+                             )
+    return schools_map
+
+def drawscattByPartition(taxiData, schools_map,  mapHtmlpath, true_or_pred="true"):
     """
     难以直接把所有的点一次性画出来， 所以分步画
     :param taxiData: 包含经纬度的列表，形如[[lat1, lng1], [lat2, lng2]
     :param mapHtmlpath: 输出html地址
+    :param true_or_pred: if true: blue, if pred: red
     :return:
     """
     print("start drawing partition.......")
     lenOfData = len(taxiData)
     size = 100000
     count = 0
+    marker_color = "blue" if true_or_pred == "true" else "red"
+    icon = folium.Icon(color=marker_color)
 
-    schools_map = folium.Map(location=taxiData[0], zoom_start=10,
-                             tiles="http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}",
-                             attr="&copy; <a href='http://ditu.amap.com/'>高德地图</a>"
-                             )
+
+    # schools_map = folium.Map(location=taxiData[0], zoom_start=10,
+    #                          tiles="http://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}",
+    #                          attr="&copy; <a href='http://ditu.amap.com/'>高德地图</a>",
+    #
+    #                          )
+
+    # marker_cluster = plugins.MarkerCluster().add_to(schools_map)
     marker_cluster = plugins.MarkerCluster().add_to(schools_map)
     start_time = time.time()
     index = 0
@@ -436,7 +460,7 @@ def drawscattByPartition(taxiData, mapHtmlpath):
             for j in range(len(subData)):
                 string_car = str(subData[j])
                 info = "code: "+string_car.split(",")[0]+" time: "+string_car.split(",")[1]
-                folium.Marker(subData[j]).add_to(
+                folium.Marker(subData[j],icon=icon).add_to(
                     marker_cluster)
 
         except Exception as result:
@@ -612,29 +636,34 @@ def sortAreaByCarNum(carInAreaFilename, carInAreaSortByCarNumfilename):
     carInAreaSortByCarNumFile.close()
     carInAreaFile.close()
 
-def showTaxiData(code, dataDiviedFlag=True,carNum='100'):
+def showTaxiData(code, dataDiviedFlag=True,carNum='500'):
     if not dataDiviedFlag:
         DataDivision.divideTrueAndPredDataByCode(carNum)
 
     car_code = str(code)
     true_or_pred = "true"
+    mapHtmlpath = "result_data/" + car_code +"_train_" + carNum +"_times" +".html"
+    regionHtmlPath = "result_data/" +   car_code + "_region_" + "train_" + carNum +"_times" + ".html"
+    trajectoryPath = "result_data/" +   car_code + "_trajectory_" + "train_" + carNum +"_times" + ".html"
     for i in range(2):
         true_or_pred = "predicted" if true_or_pred == "true" else "true"
         ordered_file_directory = "./processingData/taxi_" + carNum + '/' + true_or_pred + '/order/'
 
 
 
-        mapHtmlpath = "result_data/" + true_or_pred + "_" + car_code + ".html"
-        regionHtmlPath = "result_data/" + true_or_pred + "_region_" + car_code + ".html"
-        trajectoryPath = "result_data/" + true_or_pred + "_trajectory_" + car_code + ".html"
+        # mapHtmlpath = "result_data/" + true_or_pred + "_" + car_code + ".html"
+        # regionHtmlPath = "result_data/" + true_or_pred + "_region_" + car_code + ".html"
+        # trajectoryPath = "result_data/" + true_or_pred + "_trajectory_" + car_code + ".html"
         taxiData, code_time_list = readLatAndLngFromFile(
             ordered_file_directory + 'taxiCode_' + str(car_code) + '.txt')  # 读取经纬度
+        if i == 0:
+            map = createMapCanvas(taxiData)
 
-        map = drawscattByPartition(taxiData, mapHtmlpath)  # 画出车辆经纬度图
+        map = drawscattByPartition(taxiData, map, mapHtmlpath)  # 画出车辆经纬度图
         region = areaParition(taxiData,true_or_pred)     # 划分区域
-        drawCarDensity(region, map, regionHtmlPath) # 画出车辆密度图
+        drawCarDensity(region, map, regionHtmlPath, true_or_pred) # 画出车辆密度图
         drawCartrajectory(taxiData, code_time_list, map, trajectoryPath,true_or_pred)  # 画出车辆轨迹
-        outputDisToFile(taxiData, code_time_list, True)  # 输出两点间距离,输出到processingData目录下
+        outputDisToFile(taxiData, code_time_list, True, true_or_pred)  # 输出两点间距离,输出到processingData目录下
     # print("The avg time interval is ", calAvgTimeInterval(code_time_list)[0],"s") # 计算平均时间
 
     # sortAreaByCarNum("./processingData/FinialCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")

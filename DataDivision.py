@@ -212,7 +212,7 @@ if __name__ == "__main__":
 
 
     # dataDivisionByTaxiCode("./","./processingData/taxiCode/unorder/","TaxiData.txt")
-    taxi_num_dir = "taxi_100/"
+    taxi_num_dir = "taxi_500/"
     # true_or_pred = "true"
     dataDivisionByTaxiCode("./savedata", "/"+taxi_num_dir+"GATraj/"+"true"+"_trajectory.csv",
                            "./processingData/"+taxi_num_dir+"/"+"true"+"/unorder/")
