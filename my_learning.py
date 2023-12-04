@@ -229,7 +229,9 @@ def get_from_code2code(start_taxi_code=22243, end_taxi_code=22247, time_format=1
 
 
 if __name__ == "__main__":
-    get_from_code2code()
+    for i in range(2):
+        print(i)
+    # get_from_code2code()
     #get_data_in_frame(input_file="sample/22223_22224/true_pos_.csv",output_file="sample/22223_22224/sample_taxi_data.csv")
     # get_sample_file()
     # get_data_in_frame()

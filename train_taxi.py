@@ -41,7 +41,7 @@ def get_parser():
     parser.add_argument(
         '--output_size', default=2, type=int)
     parser.add_argument(
-        '--input_size', default=2, type=int, help="it can be set as default--2(lng, lat), or 3(lng, lat, timeFrame)")
+        '--input_size', default=2, type=int)
     parser.add_argument(
         '--min_obs', default=8, type=int)
     parser.add_argument('--num_pred', type=int, default=1, help='This is the number of predictions for each agent')
@@ -188,9 +188,7 @@ if __name__ == '__main__':
     p.save_base_dir = "./savedata/"
     p.dataset = "taxi"
 
-    p.num_epochs = 1
-    # p.num_epochs = 1
-
+    p.num_epochs = 500
     p.phase = 'train'
     p.learning_rate = 1e-2
     p.load_model = 0
