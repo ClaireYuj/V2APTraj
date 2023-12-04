@@ -14,6 +14,7 @@ import os
 import pandas as pd
 # input_file = "sample_taxi_data.csv"
 from pyproj import Proj, Transformer, CRS
+import matplotlib.pyplot as plt
 
 input_orderByCar_dir = "taxi/orderByCode/"
 output_orderByCar_sample_file_path = "sample/22227_22228/sample_taxiData.csv"
@@ -227,9 +228,33 @@ def get_from_code2code(start_taxi_code=22243, end_taxi_code=22247, time_format=1
 
     print("finish write to ", output_orderByCar_sample_file_path)
 
+def test_plotter(filename):
+    epoch_list = []
+    loss_list = []
+    with open(filename, "r") as file:
+        while True:
+            line = file.readline()
+            if line:
+                cur_epoch = int(line.split(",")[0])
+                cur_loss = float(line.split(",")[1])
+                epoch_list.append(cur_epoch)
+                loss_list.append(cur_loss)
+            else:
+                break
+
+    plt.plot(epoch_list, loss_list)
+    plt.title("Traning loss in 101-500 epoches")
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+
+    plt.savefig("Traning_loss_in_101_500_epoches.jpg")
+    plt.show()
+
+
 
 if __name__ == "__main__":
-    get_from_code2code()
+    test_plotter("savedata/taxi_500/GATraj/log_curve.txt")
+    #get_from_code2code()
     #get_data_in_frame(input_file="sample/22223_22224/true_pos_.csv",output_file="sample/22223_22224/sample_taxi_data.csv")
     # get_sample_file()
     # get_data_in_frame()

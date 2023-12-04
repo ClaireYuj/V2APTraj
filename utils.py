@@ -256,7 +256,7 @@ class DataLoader_bytrajec2():
         batch_data_mass = []
         batch_data = []
         Batch_id = []
-        ped_list = []  # 用于存储对应的行人标识信息
+        ped_list = ()  # 用于存储对应的行人标识信息
         time_seq_list = ()  # 用于存储时间
 
         if setname == 'train':
@@ -301,9 +301,10 @@ class DataLoader_bytrajec2():
                 # cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)  # 不包含行人标识信息和时间信息
                 cur_time = (cur_trajec[:, 0].reshape(-1, 1, 1),)
                 cur_trajec = (cur_trajec[:, 1:].reshape(-1, 1, self.args.input_size),)
-
+                cur_ped = np.full_like(cur_time, ped)
+                cur_ped = (cur_ped[0],)
                 traject = traject.__add__(cur_trajec)  # tuple of cur_trajec arrays in the same scene
-                ped_list.append(ped)  # 将行人标识信息存储到 ped_list 中
+                ped_list = ped_list.__add__(cur_ped)  # 将行人标识信息存储到 ped_list 中
                 time_seq_list = time_seq_list.__add__(cur_time)
             if traject.__len__() < 1:
                 if i == data_index.shape[1] - 1 and self.args.batch_size != 1:
@@ -328,7 +329,7 @@ class DataLoader_bytrajec2():
                 batch_split = []
                 start, end = 0, 0
                 nei_lists = []
-                ped_list = []  # 清空 ped_list
+                 # 清空 ped_list
             else:
                 if batch_count == self.args.batch_size or i == data_index.shape[1] - 1:
                     batch_data_64 = self.merg_batch(cur_batch_data, batch_data_64)
@@ -337,7 +338,7 @@ class DataLoader_bytrajec2():
                     batch_split = []
                     start, end = 0, 0
                     nei_lists = []
-                    ped_list = []  # 清空 ped_list
+                    # ped_list = []  # 清空 ped_list
                 else:
                     if batch_count == 1:
                         batch_data_64 = cur_batch_data
