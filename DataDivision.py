@@ -49,15 +49,16 @@ def sortDataByTime(unorderd_directory, orderd_diretory,filename):
             else:
                 break
 
-
+    unique_info_list = deduplication(info_list)
     order_file_name = orderd_diretory + filename
     order_file = open(order_file_name, "w")
-    order_info_list = quick_sort_by_time_intervals(info_list, time_index=1)
+    unique_order_info_list = quick_sort_by_time_intervals(unique_info_list, time_index=1)
     # order_info_list = quick_sort(info_list, time_index=2)
 
     print("finish sort " + str(filename))
 
-    for line in order_info_list:
+    # for line in order_info_list:
+    for line in unique_order_info_list:
         order_file.write(line)
     print("finish write to new file "+str(order_file_name))
     return order_file
@@ -82,6 +83,20 @@ def quick_sort_by_time_intervals(info_list, time_index=1):
              if int((info_list[x].split(",")[time_index])) >= pivot and x != pivot_index]
 
     return quick_sort_by_time_intervals(left, time_index=1) + middle + quick_sort_by_time_intervals(right, time_index=1)
+
+def deduplication(info_list):
+
+    # unique_info_list = list(set(info_list))
+    unique_info_list = []
+    for info in info_list:
+        # print("Start read from unorder file " + str(info))
+        if info not in unique_info_list:
+            # print("Start write to unorder file " + str(info))
+            unique_info_list.append(info)
+    return unique_info_list
+
+
+
 def quick_sort(info_list, time_index=1):
     """
     快排，对包含了时间信息的整个列表按照时间顺序排序
@@ -107,14 +122,14 @@ def quick_sort(info_list, time_index=1):
 
 
 
-def divideDataByTime(filename):
+def divideDataByTime(filename, directory="processingData/rearrangeTaxiTime/hourAndMinute"):
     """
     基于时间对原数据划分
     :param filename: 原数据所在文件名
     :return:
     """
     file = open(filename, "r")
-    directory = "processingData/rearrangeTaxiTime/hourAndMinute"
+
     generated_file_dic = {}
 
     """ h: hour, m: minute, m_1: minute-10"""
@@ -150,6 +165,52 @@ def divideDataByTime(filename):
     file.close()
 
 
+def dataDivision(original_data_dir, filename,  divided_data_dir):
+    """
+    按照车辆代码对数据划分
+    :param filename: 原数据所在文件名
+    :return:
+    """
+    file = open(original_data_dir+filename, "r")
+    if not os.path.exists(divided_data_dir):
+        # 如果目录不存在，则创建目录
+        os.makedirs(divided_data_dir)
+
+    pre_code = 0
+    # code file 的数字是源taxiCode文件中第一个车的代码
+    code_file = open(divided_data_dir+"start"+".txt", "a")
+    code_info_list = []
+    line_count = 0
+    while True:
+        line = file.readline()
+        if line:
+            code = line.split(",")[1]
+            len_line_split = line.split(",").__len__()  # get line split by ","
+            for i in range(len_line_split // 4):
+                try:
+                    lat = float(line.split(",")[4 * i + 2])
+                    lng = float(line.split(",")[4 * i + 3])
+                    code = int((line.split(",")[4 * i + 0]).split(".")[0])
+                    time = str((line.split(",")[4 * i + 1]).split(".")[0])
+                    if code != pre_code:
+                        code_file.close()
+                        path = divided_data_dir + "taxiCode_" + str(code) + ".txt"
+                        pre_code = code
+                        code_file = open(path, "a")
+                        print("Start write to unorder file "+str(code) +"......")
+                        # code_info_list.append(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
+                    code_file.write(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
+
+                except Exception as result:
+                    print(result)
+        else:
+            break
+    print("finish get code info list")
+    # unique_code_info_list = deduplication(code_info_list)
+    #
+    # for line in unique_code_info_list:
+    #     code_file.write(line)
+
 def dataDivisionByTaxiCode(original_data_dir, filename,  divided_data_dir):
     """
     按照车辆代码对数据划分
@@ -164,70 +225,131 @@ def dataDivisionByTaxiCode(original_data_dir, filename,  divided_data_dir):
     pre_code = 0
     # code file 的数字是源taxiCode文件中第一个车的代码
     code_file = open(divided_data_dir+"start"+".txt", "a")
+    code_info_list = []
+    line_count = 0
     while True:
         line = file.readline()
         if line:
             # code = line.split(",")[1]
-            if line:
+
 
                 len_line_split = line.split(",").__len__()  # get line split by ","
-                for i in range(len_line_split // 4):
+                # for i in range(len_line_split // 4):
+                #
+                #     try:
+                        # lat = float(line.split(",")[4 * i + 2])
+                        # lng = float(line.split(",")[4 * i + 3])
+                        # code = int((line.split(",")[4 * i + 0]).split(".")[0])
+                        # time = str((line.split(",")[4 * i + 1]).split(".")[0])
+                try:
 
-                    try:
-                        lat = float(line.split(",")[4 * i + 2])
-                        lng = float(line.split(",")[4 * i + 3])
-                        code = int((line.split(",")[4 * i + 0]).split(".")[0])
-                        time = str((line.split(",")[4 * i + 1]).split(".")[0])
+                    if line_count % 4 == 0:
+                        code = int((line.split("\n")[0]).split(".")[0])
+                    elif line_count % 4 == 1:
+                        time = str((line.split("\n")[0]).split(".")[0])
+                    elif line_count % 4 == 2:
+                        lat = float(line.split("\n")[0])
+                    elif line_count % 4 == 3:
+                        lng = float(line.split("\n")[0])
+                    if line_count != 0 and line_count % 4 == 0:
                         if code != pre_code:
                             code_file.close()
                             path = divided_data_dir + "taxiCode_" + str(code) + ".txt"
                             pre_code = code
                             code_file = open(path, "a")
-                            print("Start write file ", code, " ......")
+                            print("Start write to unorder file "+str(code) +"......")
+                        # code_info_list.append(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
                         code_file.write(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
-                    except Exception as result:
-                        print(result)
+                    line_count += 1
+                except Exception as result:
+                    print(result)
         else:
             break
+    print("finish get code info list")
 
+def dataDivisionByTime(original_data_dir, filename,  divided_data_dir):
+    """
+    按照车辆代码对数据划分
+    :param filename: 原数据所在文件名
+    :return:
+    """
+    file = open(original_data_dir+filename, "r")
+    if not os.path.exists(divided_data_dir):
+        # 如果目录不存在，则创建目录
+        os.makedirs(divided_data_dir)
+
+    pre_time_range_index = 0
+    # original time file is start.txt file
+    time_file = open(divided_data_dir+"start"+".txt", "a")
+    code_info_list = []
+    line_count = 0
+    while True:
+        line = file.readline()
+        if line:
+                try:
+                    if line_count % 4 == 0:
+                        code = int((line.split("\n")[0]).split(".")[0])
+                    elif line_count % 4 == 1:
+                        time = str((line.split("\n")[0]).split(".")[0])
+                        time_range_index = int(time) // 3600  # let 1 hour as the borderline
+                    elif line_count % 4 == 2:
+                        lat = float(line.split("\n")[0])
+                    elif line_count % 4 == 3:
+                        lng = float(line.split("\n")[0])
+
+                    if line_count != 0 and line_count % 4 == 0:
+                        if time_range_index != pre_time_range_index:
+                            time_file.close()
+                            path = divided_data_dir + "timeRange_" + str(time_range_index)+"_"+ str((time_range_index+1)) + "_clocktxt"
+                            pre_time_range_index = time_range_index
+                            time_file = open(path, "a")
+                            print("Start write to unorder file "+str(time_range_index) +"......")
+                        # code_info_list.append(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
+                        time_file.write(str(code) + "," + str(time) + "," + str(lat) + "," + str(lng)+'\n')
+                    line_count += 1
+                except Exception as result:
+                    print(result)
+        else:
+            break
+    print("finish get time info list")
 
 
 def divideTrueAndPredDataByCode(carNum):
     taxi_num_dir = "taxi_"+str(carNum) + '/'
     dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
-                           "./processingData/" + taxi_num_dir + "/" + "true" + "/unorder/")
+                           "./processingData/" + taxi_num_dir + "/" + "true" + "/code_unorder/")
     new_true_data_directory = "./processingData/" + taxi_num_dir + "/" + "true" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
-    sortDataOfFilesByTimeInSequence(new_true_data_directory + "unorder/", new_true_data_directory + "order/")
+    sortDataOfFilesByTimeInSequence(new_true_data_directory + "unorder/", new_true_data_directory + "code_order/")
     dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
-                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/unorder/")
+                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/code_unorder/")
     new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
-    sortDataOfFilesByTimeInSequence(new_pred_data_directory + "unorder/", new_pred_data_directory + "order/")
+    sortDataOfFilesByTimeInSequence(new_pred_data_directory + "code_unorder/", new_pred_data_directory + "code_order/")
+
+
+def divideTrueAndPredDataByTime(carNum):
+    taxi_num_dir = "taxi_"+str(carNum) + '/'
+    dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
+                           "./processingData/" + taxi_num_dir + "/" + "true" + "/time_unorder/")
+    new_true_data_directory = "./processingData/" + taxi_num_dir + "/" + "true" "/"
+
+    # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
+    sortDataOfFilesByTimeInSequence(new_true_data_directory + "time_unorder/", new_true_data_directory + "time_order/")
+    dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
+                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/time_unorder/")
+    new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
+
+    # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
+    sortDataOfFilesByTimeInSequence(new_pred_data_directory + "time_unorder/", new_pred_data_directory + "time_order/")
 
 
 if __name__ == "__main__":
 
-
-    # dataDivisionByTaxiCode("./","./processingData/taxiCode/unorder/","TaxiData.txt")
-    taxi_num_dir = "taxi_500/"
-    # true_or_pred = "true"
-    dataDivisionByTaxiCode("./savedata", "/"+taxi_num_dir+"GATraj/"+"true"+"_trajectory.csv",
-                           "./processingData/"+taxi_num_dir+"/"+"true"+"/unorder/")
-    new_true_data_directory = "./processingData/" + taxi_num_dir +"/"+"true" "/"
-
-    # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
-    sortDataOfFilesByTimeInSequence(new_true_data_directory + "unorder/", new_true_data_directory + "order/")
-    dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
-                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/unorder/")
-    new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
-
-    # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
-    sortDataOfFilesByTimeInSequence(new_pred_data_directory + "unorder/", new_pred_data_directory + "order/")
-
-
+    # divideTrueAndPredDataByCode(500)
+    divideTrueAndPredDataByTime(500)
     # taxiCode目录下要有unorder和sortByTimeInSequence两个目录
     # 目录结构"./processingData/rearrangeTaxiTime/taxiCode/unorder"
     # 目录结构 "./processingData/rearrangeTaxiTime/taxiCode/sortByTimeInSequence"

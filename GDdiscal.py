@@ -29,6 +29,8 @@ def rad(d):
 
 
 def radToDegree(rad):
+
+
     return rad * 180.0 / math.pi
 
 
@@ -210,7 +212,7 @@ def areaParition(datalist, true_or_pred="true"):
     可以利用全局变量 SUB_AREA_LENGTH 和 SUB_AREA_WIDTH控制区域大小
     返回画好的区域的字典数组，可以在FinialCarInArea.txt文档中查看
     :param datalist: 车辆经纬度的列表[[laat1,lng1],[lat2,lng2]
-    :return:
+    :return: region_map: writen in Final Car text
     """
     vertex = getVertex(datalist)
     total_length, total_width = calRectArea(vertex[0], vertex[1], vertex[2], vertex[3])
@@ -271,7 +273,7 @@ def areaParition(datalist, true_or_pred="true"):
         #     print("map_len:", len(map)," car_index:", car_index, "lng_index",lng_index,"lat_index:", lat_index)
         #     print(" map[car_index][\"carNum\"]: ", map[car_index]["carNum"],)
     print("finish allocate the car in area..........")
-    final_area_recode_file = open(processingData_root+true_or_pred+"_FinialCarInArea.txt", "w")
+    final_area_recode_file = open(processingData_root+true_or_pred+"_FinalCarInArea.txt", "w")
     for m in region_map:
         if m["carNum"] > 0:
             final_area_recode_file.write(str(m)+"\n")
@@ -281,6 +283,12 @@ def areaParition(datalist, true_or_pred="true"):
     test_area_file.close()
     return region_map
 
+def trueInPredArea():
+    """
+    how many true car in the pred area?
+
+    :return:
+    """
 
 
 def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true"):
@@ -636,7 +644,14 @@ def sortAreaByCarNum(carInAreaFilename, carInAreaSortByCarNumfilename):
     carInAreaSortByCarNumFile.close()
     carInAreaFile.close()
 
-def showTaxiData(code, dataDiviedFlag=True,carNum='500'):
+def showTaxiDataByCarCode(code, dataDiviedFlag=True,carNum='500'):
+    """
+    show the region, distribution and trajectory of car by code
+    :param code: code of visulaized car
+    :param dataDiviedFlag: is the records divided
+    :param carNum: the training times -- Distinguishing on filename
+    :return:
+    """
     if not dataDiviedFlag:
         DataDivision.divideTrueAndPredDataByCode(carNum)
 
@@ -648,9 +663,6 @@ def showTaxiData(code, dataDiviedFlag=True,carNum='500'):
     for i in range(2):
         true_or_pred = "predicted" if true_or_pred == "true" else "true"
         ordered_file_directory = "./processingData/taxi_" + carNum + '/' + true_or_pred + '/order/'
-
-
-
         # mapHtmlpath = "result_data/" + true_or_pred + "_" + car_code + ".html"
         # regionHtmlPath = "result_data/" + true_or_pred + "_region_" + car_code + ".html"
         # trajectoryPath = "result_data/" + true_or_pred + "_trajectory_" + car_code + ".html"
@@ -668,11 +680,23 @@ def showTaxiData(code, dataDiviedFlag=True,carNum='500'):
 
     # sortAreaByCarNum("./processingData/FinialCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
 
+def showTaxisDataBetweenTime(start_time, end_time, dataDiviedFlag=True, carNum="500"):
+    if not dataDiviedFlag:
+        DataDivision.divideTrueAndPredDataByCode(carNum)
+
+    true_or_pred = "true"
+    mapHtmlpath = "result_data/" + start_time+ "_"+ end_time +"_train_" + carNum +"_times" +".html"
+    regionHtmlPath = "result_data/" + start_time+ "_"+ end_time + "_region_" + "train_" + carNum +"_times" + ".html"
+
+    for i in range(2):
+        true_or_pred = "predicted" if true_or_pred == "true" else "true"
+        ordered_file_directory = "./processingData/time_" + start_time+ "_"+ end_time + '/' + true_or_pred + '/order/'
+
 
 # 计算gcj中两点的距离
 # 将点显示在高德地图中，已经验证符合实际位置，可以使用
 if __name__ == '__main__':
-    showTaxiData(22575)
+    showTaxiDataByCarCode(22575)
     #
     # # ordered_file_directory = "./processingData/rearrangeTaxiTime/taxiCode/sortByTimeInSequence/"
     # # filename = "taxiCode_22223"

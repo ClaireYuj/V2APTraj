@@ -305,7 +305,7 @@ class Processor():
         for batch in range(self.dataloader_gt.testbatchnums):
             if batch % 100 == 0:
                 print('testing batch', batch, self.dataloader_gt.testbatchnums)
-            id_lists,inputs_gt, time_seq_list,batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
+            id_lists,inputs_gt, time_seq_list, batch_split, nei_lists = self.dataloader_gt.get_test_batch(batch, epoch)
 
             # id_lists_double = [] # to write the id in list as index of trajectory, because the tuple like[lng,lat], thus it takes two
 
@@ -336,7 +336,7 @@ class Processor():
             GATraj_loss, full_pre_tra = self.net.forward(inputs_fw, epoch, iftest=True)
             if GATraj_loss == 0:
                 continue
-            print("id lists:", id_lists, " len of id lists:", len(id_lists))
+            # print("id lists:", id_lists, " len of id lists:", len(id_lists))
             print("len of full pre tra:", len(full_pre_tra))
             # id_lists = np.array(id_lists)
 
@@ -358,7 +358,8 @@ class Processor():
                 print("type of predicted_trajectory_lnglat:",type(predicted_trajectory_lnglat))
                 try:
                     # predicted_trajectory_lnglat = np.vstack([predicted_trajectory_lnglat, cur_predicted_trajectory_lnglat])
-                    predicted_trajectory_lnglat.append(cur_predicted_trajectory_lnglat)
+                    # predicted_trajectory_lnglat.append(cur_predicted_trajectory_lnglat)
+                    predicted_trajectory_lnglat = np.append(predicted_trajectory_lnglat, cur_predicted_trajectory_lnglat)
                 except Exception as e:
                     print(e)
                     print("cur_pre:",cur_predicted_trajectory_lnglat.shape)
@@ -376,7 +377,8 @@ class Processor():
 
                 try:
                     # true_trajectory_lnglat = np.vstack([true_trajectory_lnglat, cur_true_trajectory_lnglat])
-                    true_trajectory_lnglat.append(cur_true_trajectory_lnglat)
+                    # true_trajectory_lnglat.append(cur_true_trajectory_lnglat)
+                    true_trajectory_lnglat = np.append(true_trajectory_lnglat, cur_true_trajectory_lnglat)
                 except Exception as e:
                     print(e)
                     print("cur_true:",cur_true_trajectory_lnglat.shape)
