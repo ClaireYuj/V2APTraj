@@ -225,7 +225,7 @@ def areaParition(datalist, true_or_pred="true"):
 
     lat_list = [MIN_LAT]
     lng_list = [MIN_LNG]
-    test_area_file = open(processingData_root+true_or_pred+"_testAreaPart.txt", "w")
+    test_area_file = open(processingData_root+true_or_pred+"/testAreaPart.txt", "w")
     region_map = []
     len_slide = int(total_length // SUB_AREA_LENGTH)
     if total_length % SUB_AREA_LENGTH != 0:
@@ -255,7 +255,7 @@ def areaParition(datalist, true_or_pred="true"):
     test_area_file.write("lat list: "+str(lat_list)+"\nlng list: "+str(lng_list))
     print("finish divide the lat and lng.......")
 
-    car_record_file = open(processingData_root+true_or_pred+"_CarRecord.txt", "w")
+    car_record_file = open(processingData_root+true_or_pred+"/CarRecord.txt", "w")
     for data in datalist:
         try:
             lat_index, lng_index = findAreaIndexofCar(lat_list, lng_list, data[0], data[1])
@@ -273,7 +273,7 @@ def areaParition(datalist, true_or_pred="true"):
         #     print("map_len:", len(map)," car_index:", car_index, "lng_index",lng_index,"lat_index:", lat_index)
         #     print(" map[car_index][\"carNum\"]: ", map[car_index]["carNum"],)
     print("finish allocate the car in area..........")
-    final_area_recode_file = open(processingData_root+true_or_pred+"_FinalCarInArea.txt", "w")
+    final_area_recode_file = open(processingData_root+true_or_pred+"/FinalCarInArea.txt", "w")
     for m in region_map:
         if m["carNum"] > 0:
             final_area_recode_file.write(str(m)+"\n")
@@ -294,6 +294,7 @@ def trueInPredArea():
 def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true"):
     """
     在地图上标出区域的范围， 并显示该区域内的车辆数
+    blue is true, red is predicted
     :param region_map:  areaParition的返回值，形如[{"area index": 1, "min_lat":10, "min_lng":10, "max_lat":20, "max_lng":20, "carNum":30},{...},{...}]
     :param schools_map: drawScatter后的返回值
     :param regionHtmlPath: 存放画车辆密度的html路径
@@ -308,13 +309,14 @@ def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true")
             max_lng = region["max_lng"]
 
             bound = [[min_lat, min_lng], [max_lat, max_lng]]
-            rect_color = "lightblue" if true_or_pred == "true" else "red"
+            rect_color = "green" if true_or_pred == "true" else "red"
             folium.Rectangle(
                 bound,
                 # popup="</br>car num:"+str(region["carNum"])+"</br>",
                 tooltip="</br>"+true_or_pred+" car num:"+str(region["carNum"])+"</br>",
                 fill_color = rect_color,
-                fill=True
+                fill=True,
+                color=rect_color
             ).add_to(schools_map)
             # print(" draw one : min_lat:", min_lat, "min_lng:", min_lng, "max_lat:", max_lat, "max_lng:", max_lng)
 
@@ -331,7 +333,7 @@ def drawCartrajectory(taxiData, code_time_list, map ,new_map_path,true_or_pred="
     :return:
     """
     print("Start draw trajectory.....")
-    car_trjectory_file = open(processingData_root+true_or_pred+"_car_traj_record.txt","w")
+    car_trjectory_file = open(processingData_root+true_or_pred+"/car_traj_record.txt","w")
     locations = [taxiData[0]]
     lenOfData = len(taxiData)
     for i in range(1, lenOfData):
@@ -442,7 +444,7 @@ def drawscattByPartition(taxiData, schools_map,  mapHtmlpath, true_or_pred="true
     :param true_or_pred: if true: blue, if pred: red
     :return:
     """
-    print("start drawing partition.......")
+    print("start drawing partition of "+true_or_pred+".......")
     lenOfData = len(taxiData)
     size = 100000
     count = 0
@@ -457,7 +459,7 @@ def drawscattByPartition(taxiData, schools_map,  mapHtmlpath, true_or_pred="true
     #                          )
 
     # marker_cluster = plugins.MarkerCluster().add_to(schools_map)
-    marker_cluster = plugins.MarkerCluster().add_to(schools_map)
+    marker_cluster = plugins.MarkerCluster(marker_color=marker_color).add_to(schools_map)
     start_time = time.time()
     index = 0
     while index > lenOfData:
@@ -468,7 +470,11 @@ def drawscattByPartition(taxiData, schools_map,  mapHtmlpath, true_or_pred="true
             for j in range(len(subData)):
                 string_car = str(subData[j])
                 info = "code: "+string_car.split(",")[0]+" time: "+string_car.split(",")[1]
-                folium.Marker(subData[j],icon=icon).add_to(
+                folium.Marker(subData[j],
+                              icon=icon,
+                              popup="</br>"+info+"</br>",
+                              marker_color=marker_color
+                              ).add_to(
                     marker_cluster)
 
         except Exception as result:
@@ -681,6 +687,8 @@ def showTaxiDataByCarCode(code, dataDiviedFlag=True,carNum='500'):
     # sortAreaByCarNum("./processingData/FinialCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
 
 def showTaxisDataBetweenTime(start_time, end_time, dataDiviedFlag=True, carNum="500"):
+    start_time = str(start_time)
+    end_time = str(end_time)
     if not dataDiviedFlag:
         DataDivision.divideTrueAndPredDataByCode(carNum)
 
@@ -690,13 +698,121 @@ def showTaxisDataBetweenTime(start_time, end_time, dataDiviedFlag=True, carNum="
 
     for i in range(2):
         true_or_pred = "predicted" if true_or_pred == "true" else "true"
-        ordered_file_directory = "./processingData/time_" + start_time+ "_"+ end_time + '/' + true_or_pred + '/order/'
+        ordered_file_directory = "./processingData/taxi_"+carNum+"/"+ true_or_pred + "/"
+        taxiData, code_time_list = readLatAndLngFromFile(
+            ordered_file_directory + "time_order/timeRange_" + str(start_time)+ "_"+ str(end_time) + '_clock.txt')  # 读取经纬度
 
+        if i == 0:
+            map = createMapCanvas(taxiData)
 
+        map = drawscattByPartition(taxiData, map, mapHtmlpath, true_or_pred)  # 画出车辆经纬度图
+        region = areaParition(taxiData,true_or_pred)     # 划分区域
+        drawCarDensity(region, map, regionHtmlPath, true_or_pred) # 画出车辆密度图
+        sortAreaByCarNum(processingData_root+true_or_pred+"/FinalCarInArea.txt", processingData_root+true_or_pred+"/FinalCarInAreaWithoutZero.txt")
 # 计算gcj中两点的距离
 # 将点显示在高德地图中，已经验证符合实际位置，可以使用
+
+
+def performance_evaluation(final_area_file_dir):
+    """
+    1. cal the area offset
+    :return:
+    """
+
+    # cal the area offset
+
+
+    true_final_coor_list = {"lat":[], "lng":[]}
+    pre_final_coor_list = {"lat":[], "lng":[]}
+
+
+    lat_offset_list = []
+    lng_offset_list = []
+    pre_list_len = 0
+    true_list_len = 0
+    with open(final_area_file_dir + "true_FinalCarInArea.txt", "r") as true_final_area_file:
+
+        while True:
+            line = true_final_area_file.readline()
+            if line.startswith("lat list"):
+                tmp_lng_str = (line.split("lat list:[")[1]).split("]")[0]
+                tmp_lng_list = tmp_lng_str.split(",")
+                true_final_coor_list["lat"] = tmp_lng_list
+                print("true_final_lat:", true_final_coor_list["lat"])
+                true_list_len += 1
+            elif line.startswith("lng list"):
+                tmp_lat_str = (line.split("lng list:[")[1]).split("]")[0]
+                tmp_lat_list = tmp_lat_str.split(",")
+                true_final_coor_list["lng"] = tmp_lat_list
+                print("true_final_lng:", true_final_coor_list["lng"])
+            if not line:
+                break
+    with open(final_area_file_dir + "predicted_FinalCarInArea.txt", "r") as pre_final_area_file:
+
+        while True:
+            line = pre_final_area_file.readline()
+            if line.startswith("lat list"):
+                tmp_lat_str = (line.split("lat list:[")[1]).split("]")[0]
+                tmp_lat_list = tmp_lat_str.split(", ")
+                pre_final_coor_list["lat"] = tmp_lat_list
+                print("pre_final_lat:", pre_final_coor_list["lat"])
+                pre_list_len += 1
+            elif line.startswith("lng list"):
+                tmp_lng_str = (line.split("lng list:[")[1]).split("]")[0]
+                tmp_lng_list = tmp_lng_str.split(",")
+                pre_final_coor_list["lng"] = tmp_lng_list
+                print("pre_final_lng:", pre_final_coor_list["lng"])
+            if not line:
+                break
+
+
+
+    print("pre list:",len(pre_final_coor_list["lat"]))
+    print("true list:", len(true_final_coor_list["lat"]))
+    pre_list_len = len(pre_final_coor_list["lat"])
+    true_list_len = len(true_final_coor_list["lat"])
+    # if len(pre_final_coor_list["lat"]) == len(true_final_coor_list["lat"]):
+    # if pre_list_len == true_list_len:
+
+    if len(pre_final_coor_list["lat"]) < len(true_final_coor_list["lat"]):
+        diff = true_list_len - pre_list_len
+        for i in range(diff):
+            pre_final_coor_list["lat"].append(0)
+            pre_final_coor_list["lng"].append(0)
+    elif len(pre_final_coor_list["lat"]) > len(true_final_coor_list["lat"]):
+        diff = pre_list_len - true_list_len
+        for i in range(diff):
+            true_final_coor_list["lat"].append(0)
+            true_final_coor_list["lng"].append(0)
+    for i in range(len(pre_final_coor_list["lat"])):
+        # true - pre
+        lat_offset_list.append(float(pre_final_coor_list["lat"][i]) - float(true_final_coor_list["lat"][i]))
+        lng_offset_list.append(float(pre_final_coor_list["lng"][i]) - float(true_final_coor_list["lng"][i]))
+
+    # lat_offset_sum = sum(abs(x) for x in lat_offset_list)
+    lat_offset_sum = sum(x for x in lat_offset_list)
+    lng_offset_sum = sum(x for x in lng_offset_list)
+    print("pre_final_lat:", pre_final_coor_list["lat"])
+    print("pre_final_lng:", pre_final_coor_list["lng"])
+    print("true_final_lat:", true_final_coor_list["lat"])
+    print("true_final_lng:", true_final_coor_list["lng"])
+
+    performance_evaluation_file = open(final_area_file_dir+"evaluation.txt","w")
+    performance_evaluation_file.write("pre_final_lat:"+str(pre_final_coor_list["lat"])+"\n")
+    performance_evaluation_file.write("pre_final_lng:"+str(pre_final_coor_list["lng"])+"\n")
+    performance_evaluation_file.write("true_final_lat:"+str(true_final_coor_list["lat"])+"\n")
+    performance_evaluation_file.write("true_final_lng:"+str(true_final_coor_list["lng"])+"\n")
+    performance_evaluation_file.write("lat offset list:"+str(lat_offset_list)+"\n")
+    performance_evaluation_file.write("lat offset sum:"+str(lat_offset_sum)+"\n")
+    performance_evaluation_file.write("lng offset list:"+str(lng_offset_list)+"\n")
+    performance_evaluation_file.write("lng offset sum:"+str(lng_offset_sum))
+
+
 if __name__ == '__main__':
-    showTaxiDataByCarCode(22575)
+    # showTaxiDataByCarCode(22575)
+    carNum = '500'
+    processingData_root += "taxi_"+carNum+"/"
+    showTaxisDataBetweenTime(1,2)
     #
     # # ordered_file_directory = "./processingData/rearrangeTaxiTime/taxiCode/sortByTimeInSequence/"
     # # filename = "taxiCode_22223"

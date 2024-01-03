@@ -18,7 +18,7 @@ def sortDataOfFilesByTimeInSequence(unorderd_directory, orderd_directory):
     :return:
     """
     for filename in os.listdir(unorderd_directory):
-        if filename.endswith('.txt') and filename.startswith("taxiCode_"):
+        if filename.endswith('.txt') and not filename.startswith("start"):
             # code = int((filename.split(".")[0]).split("_")[1])
             # if code == 25303:
             print("Start sort" + filename + "! ")
@@ -52,6 +52,7 @@ def sortDataByTime(unorderd_directory, orderd_diretory,filename):
     unique_info_list = deduplication(info_list)
     order_file_name = orderd_diretory + filename
     order_file = open(order_file_name, "w")
+    # unique_order_info_list = quick_sort_by_code(unique_info_list)
     unique_order_info_list = quick_sort_by_time_intervals(unique_info_list, time_index=1)
     # order_info_list = quick_sort(info_list, time_index=2)
 
@@ -62,6 +63,39 @@ def sortDataByTime(unorderd_directory, orderd_diretory,filename):
         order_file.write(line)
     print("finish write to new file "+str(order_file_name))
     return order_file
+def sortDataOfFilesByCode(unorderd_directory, orderd_directory):
+    """
+     将在unorder目录下的所有文件都按照时间顺序拍好
+    :param upper_directory: 未按时间顺序排序文件存放的目录的上一级目录
+    :return:
+    """
+    for filename in os.listdir(unorderd_directory):
+        if filename.endswith('.txt') and filename.startswith("timeRange_"):
+            # code = int((filename.split(".")[0]).split("_")[1])
+            # if code == 25303:
+            print("Start sort" + filename + "! ")
+            order_file = sortDataByTime(unorderd_directory, orderd_directory, filename)
+            print("sort "+filename+"sucessfully!")
+            order_file.close()
+def quick_sort_by_code(info_list, code_index=0):
+    """
+    快排，对包含了时间信息的整个列表按照时间顺序排序
+    :param info_list: 一个包含时间信息的列表，格式为如[[22223, 18520], [22225,78520]],不是时刻而是时间间隔
+    :return:
+    """
+    length = len(info_list)
+    if len(info_list) <= 1:
+        return info_list
+    # pivot_index = len(info_list) // 2
+    pivot_index = length // 2
+    pivot = int((info_list[pivot_index].split(",")[code_index]))
+    left = [info_list[x] for x in range(0, length)
+            if int((info_list[x].split(",")[code_index])) < pivot and x != pivot_index]
+    middle = [info_list[pivot_index]]
+    right = [info_list[x] for x in range(0, length)
+             if int((info_list[x].split(",")[code_index])) >= pivot and x != pivot_index]
+
+    return quick_sort_by_code(left) + middle + quick_sort_by_code(right)
 
 
 def quick_sort_by_time_intervals(info_list, time_index=1):
@@ -300,7 +334,7 @@ def dataDivisionByTime(original_data_dir, filename,  divided_data_dir):
                     if line_count != 0 and line_count % 4 == 0:
                         if time_range_index != pre_time_range_index:
                             time_file.close()
-                            path = divided_data_dir + "timeRange_" + str(time_range_index)+"_"+ str((time_range_index+1)) + "_clocktxt"
+                            path = divided_data_dir + "timeRange_" + str(time_range_index)+"_"+ str((time_range_index+1)) + "_clock.txt"
                             pre_time_range_index = time_range_index
                             time_file = open(path, "a")
                             print("Start write to unorder file "+str(time_range_index) +"......")
@@ -332,14 +366,14 @@ def divideTrueAndPredDataByCode(carNum):
 
 def divideTrueAndPredDataByTime(carNum):
     taxi_num_dir = "taxi_"+str(carNum) + '/'
-    dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
-                           "./processingData/" + taxi_num_dir + "/" + "true" + "/time_unorder/")
+    # dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
+    #                        "./processingData/" + taxi_num_dir + "/" + "true" + "/time_unorder/")
     new_true_data_directory = "./processingData/" + taxi_num_dir + "/" + "true" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
     sortDataOfFilesByTimeInSequence(new_true_data_directory + "time_unorder/", new_true_data_directory + "time_order/")
-    dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
-                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/time_unorder/")
+    # dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
+    #                        "./processingData/" + taxi_num_dir + "/" + "predicted" + "/time_unorder/")
     new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
