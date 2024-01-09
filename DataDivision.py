@@ -13,10 +13,11 @@ import os
 
 def sortDataOfFilesByTimeInSequence(unorderd_directory, orderd_directory):
     """
-     将在unorder目录下的所有文件都按照时间顺序拍好
+     将在code_unorder目录下的所有文件都按照时间顺序拍好
     :param upper_directory: 未按时间顺序排序文件存放的目录的上一级目录
     :return:
     """
+
     for filename in os.listdir(unorderd_directory):
         if filename.endswith('.txt') and not filename.startswith("start"):
             # code = int((filename.split(".")[0]).split("_")[1])
@@ -65,7 +66,7 @@ def sortDataByTime(unorderd_directory, orderd_diretory,filename):
     return order_file
 def sortDataOfFilesByCode(unorderd_directory, orderd_directory):
     """
-     将在unorder目录下的所有文件都按照时间顺序拍好
+     将在unorder目录下的所有文件都按照code顺序拍好
     :param upper_directory: 未按时间顺序排序文件存放的目录的上一级目录
     :return:
     """
@@ -355,7 +356,7 @@ def divideTrueAndPredDataByCode(carNum):
     new_true_data_directory = "./processingData/" + taxi_num_dir + "/" + "true" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
-    sortDataOfFilesByTimeInSequence(new_true_data_directory + "unorder/", new_true_data_directory + "code_order/")
+    sortDataOfFilesByTimeInSequence(new_true_data_directory + "code_unorder/", new_true_data_directory + "code_order/")
     dataDivisionByTaxiCode("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
                            "./processingData/" + taxi_num_dir + "/" + "predicted" + "/code_unorder/")
     new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
@@ -366,14 +367,14 @@ def divideTrueAndPredDataByCode(carNum):
 
 def divideTrueAndPredDataByTime(carNum):
     taxi_num_dir = "taxi_"+str(carNum) + '/'
-    # dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
-    #                        "./processingData/" + taxi_num_dir + "/" + "true" + "/time_unorder/")
+    dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "true" + "_trajectory.csv",
+                           "./processingData/" + taxi_num_dir + "/" + "true" + "/time_unorder/")
     new_true_data_directory = "./processingData/" + taxi_num_dir + "/" + "true" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
     sortDataOfFilesByTimeInSequence(new_true_data_directory + "time_unorder/", new_true_data_directory + "time_order/")
-    # dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
-    #                        "./processingData/" + taxi_num_dir + "/" + "predicted" + "/time_unorder/")
+    dataDivisionByTime("./savedata", "/" + taxi_num_dir + "GATraj/" + "predicted" + "_trajectory.csv",
+                           "./processingData/" + taxi_num_dir + "/" + "predicted" + "/time_unorder/")
     new_pred_data_directory = "./processingData/" + taxi_num_dir + "/" + "predicted" "/"
 
     # 把unorder目录下所有文件都进行时间排序，输出到orderbytime目录下, 若是直接用taxi_data，已经排序好了，暂时不用
@@ -383,7 +384,9 @@ def divideTrueAndPredDataByTime(carNum):
 if __name__ == "__main__":
 
     # divideTrueAndPredDataByCode(500)
-    divideTrueAndPredDataByTime(500)
+
+    divideTrueAndPredDataByTime(600)
+    divideTrueAndPredDataByCode(600)
     # taxiCode目录下要有unorder和sortByTimeInSequence两个目录
     # 目录结构"./processingData/rearrangeTaxiTime/taxiCode/unorder"
     # 目录结构 "./processingData/rearrangeTaxiTime/taxiCode/sortByTimeInSequence"

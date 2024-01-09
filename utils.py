@@ -1,3 +1,5 @@
+import math
+
 import torch
 import os
 import pickle
@@ -633,3 +635,133 @@ def import_class(name):
     for comp in components[1:]:
         mod = getattr(mod, comp)
     return mod
+
+# used by TrafficPredictor
+class GeoCalTools:
+    def __init__(self, EARTH_RADIUS=6378.137):
+        self.EARTH_RADIUS = EARTH_RADIUS
+    def rad(self, d):
+        return d * math.pi / 180.0
+
+    def xyz_to_latlng(self, x, y, z):
+        """
+        将大地坐标系下的xyz坐标转化为经纬度坐标
+        :param x:
+        :param y:
+        :param z:
+        :return: lat, lng
+        """
+        a = 6378137.0
+        e = 8.1819190842622e-2
+        lng = math.atan2(y, x)
+        p = math.sqrt(x * x + y * y)
+        lat = math.atan2(z, p * (1 - e * e))
+        for i in range(10):
+            N = a / math.sqrt(1 - e * e * math.sin(lat) * math.sin(lat))
+            h = p / math.cos(lat) - N
+            lat = math.atan2(z, p * (1 - e * e * N / (N + h)))
+        lat = math.degrees(lat)
+        lng = math.degrees(lng)
+        return lat, lng
+    def radToDegree(self, rad):
+
+        return rad * 180.0 / math.pi
+
+    # double s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a / 2), 2) +
+    #                 Math.cos(radLat1) * Math.cos(radLat2) * Math.pow(Math.sin(b / 2), 2)));
+    #         s = s * EARTH_RADIUS;
+    #         s = new BigDecimal(s).setScale(3, BigDecimal.ROUND_HALF_UP).doubleValue();
+    #         return s;
+    def calDis(self, lat1, lng1, lat2, lng2):
+        # 输入两点的lat/lng，得到两点的距离(m)
+        radLat1, radLat2 = self.rad(lat1), self.rad(lat2)
+        radLng1, radLng2 = self.rad(lng1), self.rad(lng2)
+        lat_df = radLat1 - radLat2
+        lng_df = radLng1 - radLng2
+        s = 2 * math.asin(math.sqrt(math.pow(math.sin(lat_df / 2), 2)
+                                    + math.cos(radLat1) * math.cos(radLat2) * math.pow(math.sin(lng_df / 2), 2)))
+
+        s = s * self.EARTH_RADIUS * 1000
+        return s
+
+    def calLngOfVertexByDistance(self, lat0, lng0, s):
+        """
+        在确定区域位置时，对于相同纬度的顶点，要确定其经度
+        ，通过获得另一个顶点的经纬度，以及两点间距离，最终求得该点的经度
+        :param lat0:
+        :param lng0:
+        :param s:
+        :return:
+        """
+        lat0 = self.rad(lat0)
+        lng0 = self.rad(lng0)
+        lng1 = self.rad(90)
+
+        s = s / (self.EARTH_RADIUS * 1000)
+        try:
+            lng1 = math.acos(1 - (2 * math.pow(math.sin(s / 2), 2)) / (math.pow(math.cos(lat0), 2))) + lng0
+        except Exception as result:
+            print(result)
+
+        return self.radToDegree(lng1)
+
+    def calLatOfVertexByDistance(self, lat0, lng0, s):
+        """
+        在确定区域位置时，对于相同经度度的顶点，要确定其纬度
+        ，通过获得另一个顶点的经纬度，以及两点间距离，最终求得该点的纬度
+        :param lat0:
+        :param lng0:
+        :param s:
+        :return:
+        """
+        lat0 = self.rad(lat0)
+        lng0 = self.rad(lng0)
+        s = s / (self.EARTH_RADIUS * 1000)
+        lat1 = s + lat0
+
+        return self.radToDegree(lat1)
+
+    def calRectArea(self, lat1, lng1, lat3, lng3):
+        """
+        求矩形面积，需要对角线两点的经纬度
+        :param lat1:
+        :param lng1:
+        :param lat3:
+        :param lng3:
+        :return:
+        """
+        lat2 = lat1
+        lng2 = lng3
+        lat4 = lat3
+        lng4 = lng1
+        print("lat1:", lat1, "lng1:", lng1, "lat4:", lat4, "lng4:", lng4)
+        print("lat4:", lat4, "lng4:", lng4, "lat3:", lat3, "lng3:", lng3)
+
+        print("calDisL: ", self.calDis(89.7, 88.6, 89.7, 18.5))
+
+        # 获得四个点的坐标
+        width = self.calDis(lat1, lng1, lat4, lng4)
+        length = self.calDis(lat4, lng4, lat3, lng3)
+        print("width:", width, "length:", length)
+        return length, width
+
+    def getVertex(self, lng_and_lat_data):
+        """
+         从所有经纬度中获得可以确定边界范围的两点（对角线）的经纬度，确定四个顶点
+        :param lng_and_lat_data:
+        :return: lat_max, lng_max, lat_min, lng_min
+        """
+        lat_min, lat_max = lng_and_lat_data[0][0], lng_and_lat_data[0][0]
+        lng_min, lng_max = lng_and_lat_data[0][1], lng_and_lat_data[0][1]
+        for data_ in lng_and_lat_data:
+            if data_[0] > lat_max:
+                lat_max = data_[0]
+            elif data_[0] < lat_min:
+                lat_min = data_[0]
+            if data_[1] > lng_max:
+                lng_max = data_[1]
+            elif data_[1] < lng_min:
+                lng_min = data_[1]
+
+        print("min_lat:", lat_min, "min_lng:", lng_min, "max_lat", lat_max, "max_lng:", lng_max)
+        return lat_max, lng_max, lat_min, lng_min

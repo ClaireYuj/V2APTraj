@@ -204,16 +204,16 @@ def getVertex(lng_and_lat_data):
     print("min_lat:", lat_min, "min_lng:", lng_min, "max_lat", lat_max, "max_lng:", lng_max)
     return lat_max, lng_max, lat_min, lng_min
 
-
-def areaParition(datalist, true_or_pred="true"):
+def dynamicAreaParition(datalist, true_or_pred="true", ordered_by_time_or_code="time"):
     """
-    划分区域,
+    基于传入的车辆的经纬度动态划分区域,（区域的位置会因为车辆的经纬度而改变）
     传入的是经纬度的list data= [[lat1, lng1], [lat2, lng2]]
     可以利用全局变量 SUB_AREA_LENGTH 和 SUB_AREA_WIDTH控制区域大小
     返回画好的区域的字典数组，可以在FinialCarInArea.txt文档中查看
-    :param datalist: 车辆经纬度的列表[[laat1,lng1],[lat2,lng2]
+    :param datalist: 车辆经纬度的列表[[lat1,lng1],[lat2,lng2]
     :return: region_map: writen in Final Car text
     """
+
     vertex = getVertex(datalist)
     total_length, total_width = calRectArea(vertex[0], vertex[1], vertex[2], vertex[3])
     MIN_LAT = vertex[2]
@@ -225,7 +225,7 @@ def areaParition(datalist, true_or_pred="true"):
 
     lat_list = [MIN_LAT]
     lng_list = [MIN_LNG]
-    test_area_file = open(processingData_root+true_or_pred+"/testAreaPart.txt", "w")
+    test_area_file = open(processingData_root+true_or_pred+"/"+ordered_by_time_or_code+"_order"+"/testAreaPart.txt", "w")
     region_map = []
     len_slide = int(total_length // SUB_AREA_LENGTH)
     if total_length % SUB_AREA_LENGTH != 0:
@@ -255,7 +255,8 @@ def areaParition(datalist, true_or_pred="true"):
     test_area_file.write("lat list: "+str(lat_list)+"\nlng list: "+str(lng_list))
     print("finish divide the lat and lng.......")
 
-    car_record_file = open(processingData_root+true_or_pred+"/CarRecord.txt", "w")
+    car_record_file = open(processingData_root+true_or_pred+"/"+ordered_by_time_or_code+"_order"+"/CarRecord.txt", "w")
+    # car_record_file.write("this file ordered by "+ordered_by_time_or_id)
     for data in datalist:
         try:
             lat_index, lng_index = findAreaIndexofCar(lat_list, lng_list, data[0], data[1])
@@ -273,10 +274,32 @@ def areaParition(datalist, true_or_pred="true"):
         #     print("map_len:", len(map)," car_index:", car_index, "lng_index",lng_index,"lat_index:", lat_index)
         #     print(" map[car_index][\"carNum\"]: ", map[car_index]["carNum"],)
     print("finish allocate the car in area..........")
-    final_area_recode_file = open(processingData_root+true_or_pred+"/FinalCarInArea.txt", "w")
+    final_area_recode_file = open(processingData_root+true_or_pred+"/"+ordered_by_time_or_code+"_order"+"/FinalCarInArea.txt", "w")
+    lat_list_by_area_col_id = [] # record the list of each col, because the area_index format as '0-1' ,'1-1', the list record the sum the lat start with['0-', '1-']
+    lng_list_by_area_col_id = []
+    last_area_index_col = -1
     for m in region_map:
         if m["carNum"] > 0:
+            m_area_index_col = int(m["area_index"].split("-")[0])
+            print("last index:",last_area_index_col," m_area_index:", m_area_index_col)
+            if m_area_index_col != last_area_index_col:
+                # lat_list_by_area_col_id.append(float(m["min_lat"]) * int(m['carNum']))
+                # lng_list_by_area_col_id.append(float(m["min_lng"]) * int(m['carNum']))
+
+                while m_area_index_col != len(lat_list_by_area_col_id) - 1:
+                    print("lat_list_by_area_col_id:",lat_list_by_area_col_id)
+                    print("m_area_index:",m_area_index_col, " len:",len(lat_list_by_area_col_id))
+                    lat_list_by_area_col_id.append(0)
+                    lng_list_by_area_col_id.append(0)
+                lat_list_by_area_col_id.append(float(m["min_lat"]) * int(m['carNum']))
+                lng_list_by_area_col_id.append(float(m["min_lng"]) * int(m['carNum']))
+            else:
+                lat_list_by_area_col_id[m_area_index_col] += float(m["min_lat"]) * int(m['carNum'])
+                lng_list_by_area_col_id[m_area_index_col] += float(m["min_lng"]) * int(m['carNum'])
             final_area_recode_file.write(str(m)+"\n")
+            last_area_index_col = m_area_index_col
+    final_area_recode_file.write("\nlat list:"+str(lat_list_by_area_col_id))
+    final_area_recode_file.write("\nlng list:"+str(lng_list_by_area_col_id))
     print("finish write the car in file......")
     final_area_recode_file.close()
     car_record_file.close()
@@ -294,8 +317,8 @@ def trueInPredArea():
 def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true"):
     """
     在地图上标出区域的范围， 并显示该区域内的车辆数
-    blue is true, red is predicted
-    :param region_map:  areaParition的返回值，形如[{"area index": 1, "min_lat":10, "min_lng":10, "max_lat":20, "max_lng":20, "carNum":30},{...},{...}]
+    green is true, red is predicted
+    :param region_map:  dynamicAreaParition的返回值，形如[{"area index": 1, "min_lat":10, "min_lng":10, "max_lat":20, "max_lng":20, "carNum":30},{...},{...}]
     :param schools_map: drawScatter后的返回值
     :param regionHtmlPath: 存放画车辆密度的html路径
     :return:
@@ -323,7 +346,7 @@ def drawCarDensity(region_map, schools_map, regionHtmlPath, true_or_pred="true")
     schools_map.save(regionHtmlPath)
 
 
-def drawCartrajectory(taxiData, code_time_list, map ,new_map_path,true_or_pred="true"):
+def drawCartrajectory(taxiData, code_time_list, map ,new_map_path,true_or_pred="true", ordered_by_time_or_code="time"):
     """
     画出行车轨迹
     :param taxiData: 包含经纬度的列表，形如[[lat1, lng1], [lat2,lng2]
@@ -333,7 +356,7 @@ def drawCartrajectory(taxiData, code_time_list, map ,new_map_path,true_or_pred="
     :return:
     """
     print("Start draw trajectory.....")
-    car_trjectory_file = open(processingData_root+true_or_pred+"/car_traj_record.txt","w")
+    car_trjectory_file = open(processingData_root+true_or_pred+"/"+ordered_by_time_or_code+"_order/"+"/car_traj_record.txt","w")
     locations = [taxiData[0]]
     lenOfData = len(taxiData)
     for i in range(1, lenOfData):
@@ -627,7 +650,7 @@ def sortAreaByCarNum(carInAreaFilename, carInAreaSortByCarNumfilename):
     while True:
         line = carInAreaFile.readline()
         # print(type(line))
-        if line:
+        if line and line.startswith("{'area_index'"):
             carNum = int(((line.split(",")[5]).split(":")[1]).split("}")[0])
             if carNum > 0:
                 infoList.append(line)
@@ -650,7 +673,7 @@ def sortAreaByCarNum(carInAreaFilename, carInAreaSortByCarNumfilename):
     carInAreaSortByCarNumFile.close()
     carInAreaFile.close()
 
-def showTaxiDataByCarCode(code, dataDiviedFlag=True,carNum='500'):
+def showTaxiDataByCarCode(code, dataDiviedFlag=True, carNum='500'):
     """
     show the region, distribution and trajectory of car by code
     :param code: code of visulaized car
@@ -668,7 +691,7 @@ def showTaxiDataByCarCode(code, dataDiviedFlag=True,carNum='500'):
     trajectoryPath = "result_data/" +   car_code + "_trajectory_" + "train_" + carNum +"_times" + ".html"
     for i in range(2):
         true_or_pred = "predicted" if true_or_pred == "true" else "true"
-        ordered_file_directory = "./processingData/taxi_" + carNum + '/' + true_or_pred + '/order/'
+        ordered_file_directory = "./processingData/taxi_" + carNum + '/' + true_or_pred + '/code_order/'
         # mapHtmlpath = "result_data/" + true_or_pred + "_" + car_code + ".html"
         # regionHtmlPath = "result_data/" + true_or_pred + "_region_" + car_code + ".html"
         # trajectoryPath = "result_data/" + true_or_pred + "_trajectory_" + car_code + ".html"
@@ -678,13 +701,13 @@ def showTaxiDataByCarCode(code, dataDiviedFlag=True,carNum='500'):
             map = createMapCanvas(taxiData)
 
         map = drawscattByPartition(taxiData, map, mapHtmlpath)  # 画出车辆经纬度图
-        region = areaParition(taxiData,true_or_pred)     # 划分区域
+        region = dynamicAreaParition(taxiData,true_or_pred, "code")     # 划分区域
         drawCarDensity(region, map, regionHtmlPath, true_or_pred) # 画出车辆密度图
-        drawCartrajectory(taxiData, code_time_list, map, trajectoryPath,true_or_pred)  # 画出车辆轨迹
+        drawCartrajectory(taxiData, code_time_list, map, trajectoryPath,true_or_pred,"code")  # 画出车辆轨迹
         outputDisToFile(taxiData, code_time_list, True, true_or_pred)  # 输出两点间距离,输出到processingData目录下
     # print("The avg time interval is ", calAvgTimeInterval(code_time_list)[0],"s") # 计算平均时间
 
-    # sortAreaByCarNum("./processingData/FinialCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
+    # sortAreaByCarNum("./processingData/FinalCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
 
 def showTaxisDataBetweenTime(start_time, end_time, dataDiviedFlag=True, carNum="500"):
     start_time = str(start_time)
@@ -706,14 +729,14 @@ def showTaxisDataBetweenTime(start_time, end_time, dataDiviedFlag=True, carNum="
             map = createMapCanvas(taxiData)
 
         map = drawscattByPartition(taxiData, map, mapHtmlpath, true_or_pred)  # 画出车辆经纬度图
-        region = areaParition(taxiData,true_or_pred)     # 划分区域
+        region = dynamicAreaParition(taxiData,true_or_pred,"time")     # 划分区域
         drawCarDensity(region, map, regionHtmlPath, true_or_pred) # 画出车辆密度图
-        sortAreaByCarNum(processingData_root+true_or_pred+"/FinalCarInArea.txt", processingData_root+true_or_pred+"/FinalCarInAreaWithoutZero.txt")
+        sortAreaByCarNum(processingData_root+true_or_pred+"/time_order/FinalCarInArea.txt", processingData_root+true_or_pred+"/time_order/FinalCarInAreaWithoutZero.txt")
 # 计算gcj中两点的距离
 # 将点显示在高德地图中，已经验证符合实际位置，可以使用
 
 
-def performance_evaluation(final_area_file_dir):
+def performance_evaluation(final_area_file_dir, ordered_by_time_or_code="time"):
     """
     1. cal the area offset
     :return:
@@ -730,10 +753,11 @@ def performance_evaluation(final_area_file_dir):
     lng_offset_list = []
     pre_list_len = 0
     true_list_len = 0
-    with open(final_area_file_dir + "true_FinalCarInArea.txt", "r") as true_final_area_file:
+    with open(final_area_file_dir + "true/"+ordered_by_time_or_code+"_order"+"/FinalCarInArea.txt", "r") as true_final_area_file:
 
         while True:
             line = true_final_area_file.readline()
+            print(line)
             if line.startswith("lat list"):
                 tmp_lng_str = (line.split("lat list:[")[1]).split("]")[0]
                 tmp_lng_list = tmp_lng_str.split(",")
@@ -747,7 +771,7 @@ def performance_evaluation(final_area_file_dir):
                 print("true_final_lng:", true_final_coor_list["lng"])
             if not line:
                 break
-    with open(final_area_file_dir + "predicted_FinalCarInArea.txt", "r") as pre_final_area_file:
+    with open(final_area_file_dir + "predicted/"+ordered_by_time_or_code+"_order"+"/FinalCarInArea.txt", "r") as pre_final_area_file:
 
         while True:
             line = pre_final_area_file.readline()
@@ -797,7 +821,7 @@ def performance_evaluation(final_area_file_dir):
     print("true_final_lat:", true_final_coor_list["lat"])
     print("true_final_lng:", true_final_coor_list["lng"])
 
-    performance_evaluation_file = open(final_area_file_dir+"evaluation.txt","w")
+    performance_evaluation_file = open(final_area_file_dir + "predicted/"+ordered_by_time_or_code+"_order/"+"evaluation.txt","w")
     performance_evaluation_file.write("pre_final_lat:"+str(pre_final_coor_list["lat"])+"\n")
     performance_evaluation_file.write("pre_final_lng:"+str(pre_final_coor_list["lng"])+"\n")
     performance_evaluation_file.write("true_final_lat:"+str(true_final_coor_list["lat"])+"\n")
@@ -809,10 +833,17 @@ def performance_evaluation(final_area_file_dir):
 
 
 if __name__ == '__main__':
-    # showTaxiDataByCarCode(22575)
+
+
     carNum = '500'
     processingData_root += "taxi_"+carNum+"/"
-    showTaxisDataBetweenTime(1,2)
+    ordered_by_time_or_code = "code"
+    if ordered_by_time_or_code == "code":
+        showTaxiDataByCarCode(22575)
+    else:
+        showTaxisDataBetweenTime(1,2)
+
+    performance_evaluation(processingData_root, ordered_by_time_or_code)
     #
     # # ordered_file_directory = "./processingData/rearrangeTaxiTime/taxiCode/sortByTimeInSequence/"
     # # filename = "taxiCode_22223"
@@ -831,13 +862,13 @@ if __name__ == '__main__':
     # taxiData, code_time_list = readLatAndLngFromFile(ordered_file_directory+'taxiCode_'+str(car_code)+'.txt') #读取经纬度
     #
     # map = drawscattByPartition(taxiData, mapHtmlpath) # 画出车辆经纬度图
-    # # region = areaParition(taxiData)     # 划分区域
+    # # region = dynamicAreaParition(taxiData)     # 划分区域
     # # drawCarDensity(region, map, regionHtmlPath) # 画出车辆密度图
     # drawCartrajectory(taxiData, code_time_list, map, trajectoryPath) # 画出车辆轨迹
     # outputDisToFile(taxiData, code_time_list, True)  # 输出两点间距离,输出到processingData目录下
     # # print("The avg time interval is ", calAvgTimeInterval(code_time_list)[0],"s") # 计算平均时间
     #
-    # # sortAreaByCarNum("./processingData/FinialCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
+    # # sortAreaByCarNum("./processingData/FinalCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
     #
     #
     #
