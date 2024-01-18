@@ -41,7 +41,7 @@ class TrafficPredictor:
         if ordered_by_time_or_code == "code":
             self.showTaxiDataByCarCode(22575)
         else:
-            self.showTaxisDataBetweenTime(1, 2)
+            self.showTaxisDataBetweenTime(1, 2, True, car_num_str)
         self.performance_evaluation(self.processingData_root, ordered_by_time_or_code)
 
     # EARTH_RADIUS = 6378.137
@@ -554,6 +554,14 @@ class TrafficPredictor:
         # sortAreaByCarNum("./processingData/FinalCarInArea.txt", "./processingData/FinalCarInAreaWithoutZero.txt")
 
     def showTaxisDataBetweenTime(self, start_time, end_time, dataDiviedFlag=True, carNum="500"):
+        """
+
+        :param start_time:
+        :param end_time:
+        :param dataDiviedFlag: have data be divided
+        :param carNum:
+        :return:
+        """
         start_time = str(start_time)
         end_time = str(end_time)
         if not dataDiviedFlag:
@@ -679,4 +687,4 @@ class TrafficPredictor:
 
 if __name__ == '__main__':
     trafficPredictor = TrafficPredictor()
-    trafficPredictor.predict('500', 'code')
+    trafficPredictor.predict('600', 'time')

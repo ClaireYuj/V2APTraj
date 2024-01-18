@@ -119,8 +119,9 @@ class Processor():
         plt.ylabel('Loss')
         plt.title('Training Loss over Epochs')
 
-        plt.show()
+
         plt.savefig(self.loss_fig_path)
+        plt.show()
 
     def train_epoch(self, epoch):
         """   batch_abs: the (orientated) batch

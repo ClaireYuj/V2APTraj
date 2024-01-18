@@ -48,7 +48,8 @@ class DataLoader_bytrajec2():
 
         if self.args.dataset == 'taxi':
             # self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22523','./sample_lnglat/22333_22343']
-            self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22523']
+            # self.data_dirs = ['./sample_lnglat/test', './sample_lnglat/22223_22523']
+            self.data_dirs = ['./sample_lnglat/22223_22225', './sample_lnglat/22223_22223']
             self.data_dir = './'
             # Data directory where the pre-processed pickle file resides
 
@@ -126,7 +127,7 @@ class DataLoader_bytrajec2():
         # For each dataset
         for seti, directory in enumerate(data_dirs):
 
-            file_path = os.path.join(directory, 'true_pos_.csv')
+            file_path = os.path.join(directory, 'true_pos_accur.csv')
             # Load the data from the csv file
             data = np.genfromtxt(file_path, delimiter=',')
             # Frame IDs of the frames in the current dataset

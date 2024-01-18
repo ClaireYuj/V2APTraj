@@ -97,9 +97,9 @@ def get_sample_file(sample_rate = 0.1):
     # input_file = "part_taxi_data.csv"
     input_file = "sample/22223_22224/sample_taxi_data.csv"
 
-def time_sort_in_format(input_file=sample_output_file, output_file=sample_sorted_output_file,format=300):
+def time_sort_in_format(input_file=sample_output_file, output_file=sample_sorted_output_file,format=1):
     """
-    把第一行时间按照每300s(5min)进行划分，并排序
+    把第一行时间按照每1s(5min)进行划分，并排序
     """
     df = pd.read_csv(input_file)
     print("try to sort the file:",input_file," by time")
@@ -131,9 +131,9 @@ def time_sort_in_format(input_file=sample_output_file, output_file=sample_sorted
 
 
 
-def id_sort_in_format(format=100):
+def id_sort_in_format(format=1):
     """
-    把第一行时间按照每100 s进行划分，并按照id排序
+    把第一行时间按照每1s进行划分，并按照id排序
     """
     df = pd.read_csv(sample_output_file)
     print("try to sort the file:",sample_output_file," by id")
@@ -181,7 +181,7 @@ def convert_latlon_to_xy(longitude, latitude):
 
     return x, y
 
-def get_from_code2code(start_taxi_code=22624, end_taxi_code=23024, time_format=10, root_path="sample"): # 22223-34003 --  train set, 34004-36950:test set
+def get_from_code2code(start_taxi_code=22223, end_taxi_code=22223, time_format=1, root_path="sample"): # 22223-34003 --  train set, 34004-36950:test set
     """
     从原始的taxiData中获得从start_taxiCode到end_taxi_code的文件，并拼成一个文件
     time_format: 把第一行时间按照每300 s进行划分
@@ -192,7 +192,7 @@ def get_from_code2code(start_taxi_code=22624, end_taxi_code=23024, time_format=1
     count = 0
     if not str(start_taxi_code)+ "_"+ str(end_taxi_code) in os.listdir(root_path):
         os.mkdir(root_path+ str(start_taxi_code) + "_"+ str(end_taxi_code))
-    output_orderByCar_sample_file_path = root_path+ str(start_taxi_code)+ "_"+ str(end_taxi_code)+"/true_pos_.csv"
+    output_orderByCar_sample_file_path = root_path+ str(start_taxi_code)+ "_"+ str(end_taxi_code)+"/true_pos_accur.csv"
     # output_orderByCar_sample_file = open(output_orderByCar_sample_file_path, "w")
     for file in os.listdir(input_orderByCar_dir):
         if(file.endswith(".txt") and file.startswith("taxiCode_")):
@@ -202,8 +202,12 @@ def get_from_code2code(start_taxi_code=22624, end_taxi_code=23024, time_format=1
                     for line in read_f.readlines():
                         id = int(line.split(",")[0])
                         time_str = line.split(",")[1]
-                        time = int(time_str.split(":")[0]) * 3600 + int(time_str.split(":")[1]) * 60 + int(
+
+                        # time = int(time_str.split(":")[0]) * 3600 + int(time_str.split(":")[1]) * 60 + int(
+                        #     time_str.split(":")[2])
+                        time = int(time_str.split(":")[0]) * 10000 + int(time_str.split(":")[1]) * 100 + int(
                             time_str.split(":")[2])
+
                         time = int(int(time) // time_format * time_format)
                         lng = line.split(",")[2]  # 经度
                         lat = line.split(",")[3]  # 纬度
